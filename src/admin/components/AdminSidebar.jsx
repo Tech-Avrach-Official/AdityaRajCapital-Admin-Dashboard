@@ -1,20 +1,30 @@
-import React, { useState } from "react";
+import React, { useState } from "react"
 import {
-  ChevronDown,
   LayoutDashboard,
-  Menu,
+  Users,
   Package,
-  Tag,
+  DollarSign,
+  FileCheck,
+  Settings,
+  FileText,
+  ChevronDown,
+  Menu,
   X,
-  ShoppingCartIcon,
-  Contact,
   LogOut,
-} from "lucide-react";
-import { NavLink } from "react-router-dom";
+  UserCog,
+  Handshake,
+  TrendingUp,
+  Wallet,
+  Percent,
+} from "lucide-react"
+import { NavLink, useLocation } from "react-router-dom"
+import { cn } from "@/lib/utils"
+import { layout } from "@/lib/theme"
 
 const AdminSidebar = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [openSubMenu, setOpenSubMenu] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [openSubMenu, setOpenSubMenu] = useState(null)
+  const location = useLocation()
 
   const menuItems = [
     {
@@ -24,65 +34,110 @@ const AdminSidebar = () => {
       path: "/admin",
     },
     {
-      id: "contactList",
-      name: "Contact List",
-      icon: Contact,
-      path: "/admin/contact-list",
-    },
-    {
-      id: "assignedAppointments",
-      name: "Assigned Appointments",
-      icon: ShoppingCartIcon,
-      path: "/admin/assigned-appointments",
-    },
-    {
-      id: "completedAppointments",
-      name: "Completed Appointments",
-      icon: Tag,
-      path: "/admin/completed-appointments",
-    },
-    {
-      id: "clinic",
-      name: "Clinics",
-      icon: Package,
+      id: "users",
+      name: "User Management",
+      icon: Users,
       subItems: [
         {
-          id: "allClinics",
-          name: "Manage Clinics",
-          path: "/admin/all-clinics",
+          id: "rms",
+          name: "Relationship Managers",
+          path: "/admin/users/rms",
+          icon: UserCog,
         },
         {
-          id: "createClinic",
-          name: "Create Clinic",
-          path: "/admin/create-clinic",
+          id: "partners",
+          name: "Partners",
+          path: "/admin/users/partners",
+          icon: Handshake,
+        },
+        {
+          id: "investors",
+          name: "Investors",
+          path: "/admin/users/investors",
+          icon: Users,
         },
       ],
     },
-  ];
+    {
+      id: "products",
+      name: "Products",
+      icon: Package,
+      path: "/admin/products",
+    },
+    {
+      id: "financial",
+      name: "Financial Management",
+      icon: DollarSign,
+      subItems: [
+        {
+          id: "investments",
+          name: "Investments",
+          path: "/admin/financial/investments",
+          icon: TrendingUp,
+        },
+        {
+          id: "payouts",
+          name: "Payouts",
+          path: "/admin/financial/payouts",
+          icon: Wallet,
+        },
+        {
+          id: "commissions",
+          name: "Commissions",
+          path: "/admin/financial/commissions",
+          icon: Percent,
+        },
+      ],
+    },
+    {
+      id: "kyc",
+      name: "KYC Verification",
+      icon: FileCheck,
+      path: "/admin/kyc",
+    },
+    {
+      id: "settings",
+      name: "System Configuration",
+      icon: Settings,
+      path: "/admin/settings",
+    },
+    {
+      id: "audit",
+      name: "Audit & Compliance",
+      icon: FileText,
+      path: "/admin/audit",
+    },
+  ]
 
   const toggleSubMenu = (id) => {
-    if (!sidebarOpen) setSidebarOpen(true);
-    setOpenSubMenu(openSubMenu === id ? null : id);
-  };
+    if (!sidebarOpen) setSidebarOpen(true)
+    setOpenSubMenu(openSubMenu === id ? null : id)
+  }
+
+  const isActive = (path) => {
+    if (path === "/admin") {
+      return location.pathname === "/admin" || location.pathname === "/admin/"
+    }
+    return location.pathname.startsWith(path)
+  }
 
   return (
     <div
-      className={`bg-gray-900 text-white sticky top-0 h-screen flex flex-col transition-all duration-300 ${
-        sidebarOpen ? "w-64" : "w-20"
-      }`}
+      className={cn(
+        "bg-gray-900 text-white sticky top-0 h-screen flex flex-col transition-all duration-300 border-r border-gray-800",
+        "hidden lg:flex", // Hide on mobile, show on large screens
+        sidebarOpen ? "w-[240px]" : "w-[64px]"
+      )}
     >
       {/* Logo & Toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <h1
-          className={`font-bold text-xl transition-all ${
-            sidebarOpen ? "block" : "hidden"
-          }`}
-        >
-          ADMIN
-        </h1>
+      <div className="flex items-center justify-between p-4 border-b border-gray-800 h-[64px]">
+        {sidebarOpen && (
+          <h1 className="font-bold text-xl text-white">AdityaRaj Capital</h1>
+        )}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-gray-800 rounded-lg"
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          aria-label="Toggle sidebar"
         >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -96,9 +151,11 @@ const AdminSidebar = () => {
               <>
                 <button
                   onClick={() => toggleSubMenu(item.id)}
-                  className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 ${
-                    openSubMenu === item.id ? "bg-gray-800" : ""
-                  }`}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors",
+                    openSubMenu === item.id ? "bg-gray-800" : "",
+                    isActive(item.subItems[0]?.path) ? "bg-gray-800" : ""
+                  )}
                 >
                   <div className="flex items-center gap-4">
                     <item.icon size={20} />
@@ -107,9 +164,10 @@ const AdminSidebar = () => {
                   {sidebarOpen && (
                     <ChevronDown
                       size={16}
-                      className={`transition-transform ${
+                      className={cn(
+                        "transition-transform",
                         openSubMenu === item.id ? "rotate-180" : ""
-                      }`}
+                      )}
                     />
                   )}
                 </button>
@@ -121,12 +179,12 @@ const AdminSidebar = () => {
                         key={sub.id}
                         to={sub.path}
                         className={({ isActive }) =>
-                          `block px-4 py-2 ml-6 pl-7 border-l-2 text-sm transition-colors
-                          ${
+                          cn(
+                            "block px-4 py-2 ml-6 pl-7 border-l-2 text-sm transition-colors",
                             isActive
-                              ? "bg-gray-700 text-white border-blue-500"
+                              ? "bg-gray-700 text-white border-primary"
                               : "text-gray-300 border-gray-600 hover:bg-gray-700"
-                          }`
+                          )
                         }
                       >
                         {sub.name}
@@ -139,12 +197,13 @@ const AdminSidebar = () => {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-4 px-4 py-3 hover:bg-gray-800 transition-all
-                  ${
+                  cn(
+                    "flex items-center gap-4 px-4 py-3 hover:bg-gray-800 transition-all",
                     isActive
-                      ? "bg-gray-800 border-l-4 border-blue-500"
-                      : ""
-                  }`
+                      ? "bg-gray-800 border-l-4 border-primary"
+                      : "",
+                    !sidebarOpen && "justify-center"
+                  )
                 }
               >
                 <item.icon size={20} />
@@ -155,15 +214,15 @@ const AdminSidebar = () => {
         ))}
       </nav>
 
-      {/* Logout UI Only */}
+      {/* Logout */}
       <div className="border-t border-gray-800 p-4">
-        <button className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-800 rounded-lg">
+        <button className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors">
           <LogOut size={20} />
           {sidebarOpen && <span>Logout</span>}
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AdminSidebar;
+export default AdminSidebar

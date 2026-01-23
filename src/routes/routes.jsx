@@ -1,58 +1,51 @@
-import { Route, Router, Routes } from "react-router-dom";
-// import Home from "../pages/home/Home";
-import AdminLayout from "../admin/layout/AdminLayout";
-// import HomePage from "../pages/home/components/HomePage";
-import Dashboard from "../admin/pages/Dashboard/Dashboard";
-import Home from "@/pages/Home/Home";
+import { Routes, Route, Navigate } from "react-router-dom"
+import AdminLayout from "../admin/layout/AdminLayout"
+import Dashboard from "../admin/pages/dashboard/Dashboard"
+import RMsPage from "../admin/pages/users/rms/RMsPage"
+import PartnersPage from "../admin/pages/users/partners/PartnersPage"
+import InvestorsPage from "../admin/pages/users/investors/InvestorsPage"
+import ProductsPage from "../admin/pages/products/ProductsPage"
+import InvestmentsPage from "../admin/pages/financial/investments/InvestmentsPage"
+import PayoutsPage from "../admin/pages/financial/payouts/PayoutsPage"
+import CommissionsPage from "../admin/pages/financial/commissions/CommissionsPage"
+import KYCPage from "../admin/pages/kyc/KYCPage"
+import SettingsPage from "../admin/pages/settings/SettingsPage"
+import AuditPage from "../admin/pages/audit/AuditPage"
 
 const AllRoutes = () => {
   return (
     <Routes>
-      {/* Public Routes */}
-    
-        {/* <Route path="products/edit/:id" element={<EditProduct />} /> */}
+      {/* Redirect root to admin dashboard */}
+      <Route path="/" element={<Navigate to="/admin" replace />} />
 
-      <Route path="/" element={<Home />} />
-
-      <Route
-        path="/admin"
-        element={
-            <AdminLayout />
-          // <ProtectedAdminRoute>
-          // </ProtectedAdminRoute>
-        }
-      >
+      {/* Admin Routes */}
+      <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
-        {/* <Route path="/admin/users" element={<HomePage />} /> */}
-      
-
         
-        {/* <Route path="products/edit/:id" element={<EditProduct />} /> */}
+        {/* User Management */}
+        <Route path="users/rms" element={<RMsPage />} />
+        <Route path="users/partners" element={<PartnersPage />} />
+        <Route path="users/investors" element={<InvestorsPage />} />
+        
+        {/* Products */}
+        <Route path="products" element={<ProductsPage />} />
+        
+        {/* Financial Management */}
+        <Route path="financial/investments" element={<InvestmentsPage />} />
+        <Route path="financial/payouts" element={<PayoutsPage />} />
+        <Route path="financial/commissions" element={<CommissionsPage />} />
+        
+        {/* KYC */}
+        <Route path="kyc" element={<KYCPage />} />
+        
+        {/* Settings */}
+        <Route path="settings" element={<SettingsPage />} />
+        
+        {/* Audit */}
+        <Route path="audit" element={<AuditPage />} />
       </Route>
-
-      {/* <Route
-        path="/clinic"
-        element={
-          <ProtectedClinicRoute>
-            <ClinicLayout />
-          </ProtectedClinicRoute>
-        }
-      >
-        <Route index element={<ClinicDashboard />} />
-        <Route path="/clinic/users" element={<HomePage />} />
-       
-        <Route path="/clinic/profile" element={<HomePage />} />
-        <Route path="/clinic/profile/:id" element={<ClinicProfile />} />
-
-        <Route path="/clinic/off-days" element={<ClinicOffDaysPage />} />
-        <Route path="/clinic/weekly-off" element={<WeeklyOffPage />} />
-        <Route path="/clinic/accepted-appointments" element={<AcceptedAppointments />} />
-        <Route path="/clinic/completed-appointments" element={<CompletedClinicBookings />} />
-
-      </Route> */}
-
     </Routes>
-  );
-};
+  )
+}
 
-export default AllRoutes;
+export default AllRoutes

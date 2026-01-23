@@ -1,55 +1,95 @@
-import { Bell, ChevronDown, Search } from 'lucide-react'
-import React from 'react'
-// import logo from '@/assets/logo-red.png'
+import React, { useState } from "react"
+import { Bell, Search, ChevronDown } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { layout } from "@/lib/theme"
+import { cn } from "@/lib/utils"
 
 const AdminHeader = () => {
+  const [notifications] = useState(5) // Mock notification count
+
   return (
-     <header className="bg-white shadow-sm">
-          <div className="flex items-center justify-between px-6 py-4">
-            {/* <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors mr-4"
-            >
-              <Menu className="w-5 h-5" />
-            </button> */}
+    <header
+      className="bg-white shadow-sm border-b border-border sticky top-0 z-50"
+      style={{ height: layout.headerHeight }}
+    >
+      <div className="flex items-center justify-between px-6 h-full">
+        {/* Logo - Left */}
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-foreground hidden md:block">
+            AdityaRaj Capital
+          </h1>
+        </div>
 
-            <div className="flex items-center gap-4 flex-1">
-              {/* <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div> */}
+        {/* Search - Center (Optional) */}
+        <div className="relative flex-1 max-w-md mx-4 lg:mx-8 hidden md:block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search..."
+            className="pl-10"
+          />
+        </div>
 
-              {/* <img src={logo} alt="logo" className=" h-10" /> */}
-              <h1 className="text-2xl font-bold text-black">Admin Panel</h1>
-            </div>
-
-            <div className="flex items-center gap-4">
-             
-
-              <div className="flex items-center gap-3 pl-4">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  D
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Dr Mandloi</p>
-                  <a 
-  href="https://mail.google.com/mail/?view=cm&fs=1&to=Service@doctorsaab.com" 
-  target="_blank" 
-  rel="noopener noreferrer"
-  className="text-sm text-gray-600 hover:underline"
->
-  Service@doctorsaab.com
-</a>
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
+        {/* Right Side - Notifications & Profile */}
+        <div className="flex items-center gap-4">
+          {/* Notifications */}
+          <div className="relative">
+            <button className="p-2 hover:bg-muted rounded-lg transition-colors relative">
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              {notifications > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  {notifications}
+                </Badge>
+              )}
+            </button>
           </div>
-        </header>
+
+          {/* Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-3 hover:bg-muted rounded-lg px-3 py-2 transition-colors">
+              <Avatar>
+                <AvatarImage src="" alt="Admin" />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  SA
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-semibold text-foreground">
+                  Super Admin
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  admin@adityarajcapital.com
+                </p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground hidden md:block" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Profile</DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive">
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </header>
   )
 }
 
