@@ -13,12 +13,12 @@ const MetricCard = ({
   className,
 }) => {
   const iconColorClasses = {
-    blue: "bg-blue-100 text-blue-600",
-    green: "bg-green-100 text-green-600",
-    orange: "bg-orange-100 text-orange-600",
-    purple: "bg-purple-100 text-purple-600",
-    red: "bg-red-100 text-red-600",
-    teal: "bg-teal-100 text-teal-600",
+    blue: "bg-blue-50 text-blue-600 dark:bg-blue-900/20",
+    green: "bg-green-50 text-green-600 dark:bg-green-900/20",
+    orange: "bg-orange-50 text-orange-600 dark:bg-orange-900/20",
+    purple: "bg-purple-50 text-purple-600 dark:bg-purple-900/20",
+    red: "bg-red-50 text-red-600 dark:bg-red-900/20",
+    teal: "bg-teal-50 text-teal-600 dark:bg-teal-900/20",
   }
 
   const isPositive = trend >= 0
@@ -26,41 +26,49 @@ const MetricCard = ({
   return (
     <div
       className={cn(
-        "bg-white rounded-lg shadow-sm p-6 border border-border",
+        "bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-border/50",
+        "flex flex-col h-full",
         className
       )}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {Icon && (
-            <div
-              className={cn(
-                "p-3 rounded-lg",
-                iconColorClasses[iconColor] || iconColorClasses.blue
-              )}
-            >
-              <Icon className="w-6 h-6" />
-            </div>
-          )}
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">{title}</p>
-            <h3 className="text-2xl font-bold text-foreground">{value}</h3>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-muted-foreground mb-2 truncate">
+            {title}
+          </p>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold text-foreground leading-tight break-words">
+              {value}
+            </h3>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-xs font-medium text-muted-foreground truncate">
+                {subtitle}
+              </p>
             )}
           </div>
         </div>
+        {Icon && (
+          <div
+            className={cn(
+              "p-3 rounded-xl shrink-0",
+              iconColorClasses[iconColor] || iconColorClasses.blue
+            )}
+          >
+            <Icon className="w-5 h-5" />
+          </div>
+        )}
       </div>
+      
       {trend !== undefined && trendLabel && (
-        <div className="mt-4 flex items-center gap-1">
+        <div className="mt-auto flex items-center gap-1.5 pt-3 border-t border-border/50">
           {isPositive ? (
-            <TrendingUp className="w-4 h-4 text-success" />
+            <TrendingUp className="w-4 h-4 text-success shrink-0" />
           ) : (
-            <TrendingDown className="w-4 h-4 text-destructive" />
+            <TrendingDown className="w-4 h-4 text-destructive shrink-0" />
           )}
           <span
             className={cn(
-              "text-sm font-medium",
+              "text-xs font-semibold",
               isPositive ? "text-success" : "text-destructive"
             )}
           >
