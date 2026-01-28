@@ -2,78 +2,78 @@ import React, { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
+import { Skeleton } from "@/components/ui/skeleton"
 import RMsTable from "./components/RMsTable"
 import CreateRMModal from "./components/CreateRMModal"
 import EditRMModal from "./components/EditRMModal"
 import RMDetailsModal from "./components/RMDetailsModal"
 import AssignPartnersModal from "./components/AssignPartnersModal"
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal"
-import { usersService } from "@/lib/api/services"
+import { useRMs } from "@/hooks"
 
 const RMsPage = () => {
-  const [rms, setRMs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchValue, setSearchValue] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  // Redux state and actions
+  const {
+    rms,
+    filteredRMs,
+    loading,
+    filters,
+    selectedRM,
+    loadRMs,
+    selectRM,
+    deselectRM,
+    updateFilters,
+    resetFilters,
+  } = useRMs()
+
+  // Local state for modal visibility
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [selectedRM, setSelectedRM] = useState(null)
 
+  // Load RMs on mount
   useEffect(() => {
     loadRMs()
-  }, [searchValue, statusFilter])
+  }, [loadRMs])
 
-  const loadRMs = async () => {
-    setLoading(true)
-    try {
-      const response = await usersService.getRMs({
-        search: searchValue,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-      })
-      setRMs(response.data)
-    } catch (error) {
-      toast.error("Failed to load RMs")
-    } finally {
-      setLoading(false)
-    }
+  // Handle filter changes - reload data
+  const handleSearchChange = (value) => {
+    updateFilters({ search: value })
   }
 
-  const handleCreate = async (data) => {
-    try {
-      await usersService.createRM(data)
-      toast.success("RM created successfully")
-      loadRMs()
-    } catch (error) {
-      toast.error("Failed to create RM")
-    }
+  const handleStatusChange = (value) => {
+    updateFilters({ status: value })
+    // Reload with new filters
+    loadRMs({ status: value !== "all" ? value : undefined })
   }
 
-  const handleEdit = async (data) => {
-    try {
-      await usersService.updateRM(selectedRM.id, data)
-      toast.success("RM updated successfully")
-      loadRMs()
-    } catch (error) {
-      toast.error("Failed to update RM")
-    }
+  const handleClearFilters = () => {
+    resetFilters()
+    loadRMs()
   }
 
-  const handleDelete = async () => {
-    try {
-      await usersService.deleteRM(selectedRM.id)
-      toast.success("RM deleted successfully")
-      loadRMs()
-    } catch (error) {
-      toast.error("Failed to delete RM")
-    }
+  // Success handlers - refresh the list after operations
+  const handleCreateSuccess = () => {
+    loadRMs()
+    toast.success("RM created successfully")
+  }
+
+  const handleEditSuccess = () => {
+    loadRMs()
+    deselectRM()
+    toast.success("RM updated successfully")
+  }
+
+  const handleDeleteSuccess = () => {
+    loadRMs()
+    deselectRM()
+    toast.success("RM deleted successfully")
   }
 
   const handleAssignPartners = async (partnerIds) => {
     try {
-      // Mock implementation - update partner assignments
       toast.success(`${partnerIds.length} partner(s) assigned successfully`)
       loadRMs()
     } catch (error) {
@@ -81,10 +81,37 @@ const RMsPage = () => {
     }
   }
 
-  const filters = [
+  // Modal handlers
+  const handleViewRM = (rm) => {
+    selectRM(rm)
+    setDetailsModalOpen(true)
+  }
+
+  const handleEditRM = (rm) => {
+    selectRM(rm)
+    setEditModalOpen(true)
+  }
+
+  const handleDeleteRM = (rm) => {
+    selectRM(rm)
+    setDeleteModalOpen(true)
+  }
+
+  const handleAssignPartnersClick = (rm) => {
+    selectRM(rm)
+    setAssignModalOpen(true)
+  }
+
+  const handleCloseModal = (modalSetter) => (open) => {
+    modalSetter(open)
+    if (!open) deselectRM()
+  }
+
+  // Filter configuration
+  const filterConfig = [
     {
       key: "status",
-      value: statusFilter,
+      value: filters.status,
       placeholder: "Status",
       options: [
         { value: "all", label: "All" },
@@ -93,6 +120,18 @@ const RMsPage = () => {
       ],
     },
   ]
+
+  // Loading skeleton
+  const LoadingSkeleton = () => (
+    <div className="space-y-3">
+      {[...Array(5)].map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
+  )
+
+  // Use filteredRMs for display (filtered client-side from Redux state)
+  const displayData = filters.search ? filteredRMs : rms
 
   return (
     <div className="space-y-6">
@@ -103,75 +142,68 @@ const RMsPage = () => {
       />
 
       <FilterBar
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        searchPlaceholder="Search by name, email, mobile, referral code..."
-        filters={filters}
+        searchValue={filters.search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Search by name, email, mobile, RM code..."
+        filters={filterConfig}
         onFilterChange={(key, value) => {
-          if (key === "status") setStatusFilter(value)
+          if (key === "status") handleStatusChange(value)
         }}
-        onClearFilters={() => {
-          setSearchValue("")
-          setStatusFilter("all")
-        }}
+        onClearFilters={handleClearFilters}
       />
 
       {loading ? (
-        <div className="text-center py-8">Loading...</div>
+        <div className="rounded-md border p-4">
+          <LoadingSkeleton />
+        </div>
       ) : (
         <RMsTable
-          data={rms}
-          onView={(rm) => {
-            setSelectedRM(rm)
-            setDetailsModalOpen(true)
-          }}
-          onEdit={(rm) => {
-            setSelectedRM(rm)
-            setEditModalOpen(true)
-          }}
-          onDelete={(rm) => {
-            setSelectedRM(rm)
-            setDeleteModalOpen(true)
-          }}
-          onAssignPartners={(rm) => {
-            setSelectedRM(rm)
-            setAssignModalOpen(true)
-          }}
+          data={displayData}
+          onView={handleViewRM}
+          onEdit={handleEditRM}
+          onDelete={handleDeleteRM}
+          onAssignPartners={handleAssignPartnersClick}
+          onViewPartners={handleViewRM}
         />
       )}
 
+      {/* Create RM Modal */}
       <CreateRMModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
-        onSubmit={handleCreate}
+        onSuccess={handleCreateSuccess}
       />
 
+      {/* Edit RM Modal */}
       <EditRMModal
         open={editModalOpen}
-        onOpenChange={setEditModalOpen}
+        onOpenChange={handleCloseModal(setEditModalOpen)}
         rm={selectedRM}
-        onSubmit={handleEdit}
+        onSuccess={handleEditSuccess}
       />
 
+      {/* RM Details Modal */}
       <RMDetailsModal
         open={detailsModalOpen}
-        onOpenChange={setDetailsModalOpen}
+        onOpenChange={handleCloseModal(setDetailsModalOpen)}
         rm={selectedRM}
       />
 
+      {/* Assign Partners Modal */}
       <AssignPartnersModal
         open={assignModalOpen}
-        onOpenChange={setAssignModalOpen}
+        onOpenChange={handleCloseModal(setAssignModalOpen)}
         rm={selectedRM}
         onSubmit={handleAssignPartners}
       />
 
+      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         open={deleteModalOpen}
-        onOpenChange={setDeleteModalOpen}
+        onOpenChange={handleCloseModal(setDeleteModalOpen)}
         entity={selectedRM}
         entityName="RM"
-        onConfirm={handleDelete}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   )

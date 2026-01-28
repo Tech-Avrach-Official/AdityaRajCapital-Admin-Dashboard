@@ -1,67 +1,93 @@
 // API Endpoints constants
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api"
-
 export const endpoints = {
-  // Auth
-  auth: {
-    login: `${BASE_URL}/auth/login`,
-    logout: `${BASE_URL}/auth/logout`,
-    refresh: `${BASE_URL}/auth/refresh`,
+  // Admin Authentication
+  admin: {
+    login: "/api/admin/login",
   },
 
+  // RM Management (Admin)
+  rm: {
+    // Legacy direct create (deprecated - use OTP flow instead)
+    create: "/api/admin/rm/create",
+    
+    // OTP Flow endpoints (recommended)
+    initiate: "/api/admin/rm/initiate",
+    verifyMobileOtp: "/api/admin/rm/verify-mobile-otp",
+    verifyEmailOtp: "/api/admin/rm/verify-email-otp",
+    complete: "/api/admin/rm/complete",
+    resendMobileOtp: "/api/admin/rm/resend-mobile-otp",
+    resendEmailOtp: "/api/admin/rm/resend-email-otp",
+    signupStatus: (requestId) => `/api/admin/rm/signup-status/${requestId}`,
+    
+    // Other RM endpoints
+    list: "/api/admin/rm/list",
+    get: (id) => `/api/admin/rm/${id}`,
+    update: (id) => `/api/admin/rm/${id}`,
+    delete: (id) => `/api/admin/rm/${id}`,
+    validateCode: (code) => `/api/admin/rm/code/${code}`,
+    partners: (id) => `/api/admin/rm/${id}/partners`,
+  },
+
+  // Partner Management (Admin)
+  partners: {
+    list: "/api/admin/partners",
+    changeRM: (partnerId) => `/api/admin/partners/${partnerId}/rm`,
+  },
+
+  // Legacy endpoints (keeping for backward compatibility)
   // Users
   users: {
-    rms: `${BASE_URL}/users/rms`,
-    rm: (id) => `${BASE_URL}/users/rms/${id}`,
-    partners: `${BASE_URL}/users/partners`,
-    partner: (id) => `${BASE_URL}/users/partners/${id}`,
-    investors: `${BASE_URL}/users/investors`,
-    investor: (id) => `${BASE_URL}/users/investors/${id}`,
+    rms: "/api/users/rms",
+    rm: (id) => `/api/users/rms/${id}`,
+    partners: "/api/users/partners",
+    partner: (id) => `/api/users/partners/${id}`,
+    investors: "/api/users/investors",
+    investor: (id) => `/api/users/investors/${id}`,
   },
 
   // Products
   products: {
-    list: `${BASE_URL}/products`,
-    detail: (id) => `${BASE_URL}/products/${id}`,
-    commission: (id) => `${BASE_URL}/products/${id}/commission`,
+    list: "/api/products",
+    detail: (id) => `/api/products/${id}`,
+    commission: (id) => `/api/products/${id}/commission`,
   },
 
   // Financial
   financial: {
-    investments: `${BASE_URL}/financial/investments`,
-    investment: (id) => `${BASE_URL}/financial/investments/${id}`,
-    payouts: `${BASE_URL}/financial/payouts`,
-    payout: (id) => `${BASE_URL}/financial/payouts/${id}`,
-    uploadPdf: `${BASE_URL}/financial/payouts/upload-pdf`,
-    commissions: `${BASE_URL}/financial/commissions`,
-    commission: (id) => `${BASE_URL}/financial/commissions/${id}`,
+    investments: "/api/financial/investments",
+    investment: (id) => `/api/financial/investments/${id}`,
+    payouts: "/api/financial/payouts",
+    payout: (id) => `/api/financial/payouts/${id}`,
+    uploadPdf: "/api/financial/payouts/upload-pdf",
+    commissions: "/api/financial/commissions",
+    commission: (id) => `/api/financial/commissions/${id}`,
   },
 
   // KYC
   kyc: {
-    list: `${BASE_URL}/kyc`,
-    detail: (id) => `${BASE_URL}/kyc/${id}`,
-    verify: (id) => `${BASE_URL}/kyc/${id}/verify`,
-    reject: (id) => `${BASE_URL}/kyc/${id}/reject`,
+    list: "/api/kyc",
+    detail: (id) => `/api/kyc/${id}`,
+    verify: (id) => `/api/kyc/${id}/verify`,
+    reject: (id) => `/api/kyc/${id}/reject`,
   },
 
   // Dashboard
   dashboard: {
-    metrics: `${BASE_URL}/dashboard/metrics`,
-    charts: `${BASE_URL}/dashboard/charts`,
+    metrics: "/api/dashboard/metrics",
+    charts: "/api/dashboard/charts",
   },
 
   // Settings
   settings: {
-    payoutPhases: `${BASE_URL}/settings/payout-phases`,
-    system: `${BASE_URL}/settings/system`,
-    templates: `${BASE_URL}/settings/templates`,
+    payoutPhases: "/api/settings/payout-phases",
+    system: "/api/settings/system",
+    templates: "/api/settings/templates",
   },
 
   // Audit
   audit: {
-    logs: `${BASE_URL}/audit/logs`,
-    export: `${BASE_URL}/audit/export`,
+    logs: "/api/audit/logs",
+    export: "/api/audit/export",
   },
 }

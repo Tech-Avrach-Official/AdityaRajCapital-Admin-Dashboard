@@ -1,5 +1,7 @@
 import React, { useState } from "react"
-import { Bell, Search, ChevronDown } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Bell, Search, ChevronDown, LogOut } from "lucide-react"
+import toast from "react-hot-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -12,10 +14,21 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { layout } from "@/lib/theme"
-import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks"
 
 const AdminHeader = () => {
+  const navigate = useNavigate()
   const [notifications] = useState(5) // Mock notification count
+  
+  // Use Redux auth hook
+  const { adminId, logout } = useAuth()
+  const displayName = adminId || "Super Admin"
+
+  const handleLogout = async () => {
+    await logout()
+    toast.success("Logged out successfully")
+    navigate("/admin/login", { replace: true })
+  }
 
   return (
     <header
@@ -68,7 +81,7 @@ const AdminHeader = () => {
               </Avatar>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-semibold text-foreground">
-                  Super Admin
+                  {displayName}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   admin@adityarajcapital.com
@@ -80,9 +93,15 @@ const AdminHeader = () => {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/admin/settings")}>
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem
+                className="text-destructive cursor-pointer"
+                onClick={handleLogout}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>

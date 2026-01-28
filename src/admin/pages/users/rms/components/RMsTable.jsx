@@ -20,75 +20,117 @@ import StatusBadge from "@/components/common/StatusBadge"
 import { format } from "date-fns"
 import { toast } from "react-hot-toast"
 
-const RMsTable = ({ data, onView, onEdit, onDelete, onAssignPartners }) => {
+const RMsTable = ({ data, onView, onEdit, onDelete, onAssignPartners, onViewPartners }) => {
+  // Copy RM code to clipboard
+  const copyToClipboard = (code) => {
+    navigator.clipboard.writeText(code)
+    toast.success("RM code copied!")
+  }
+
   const columns = useMemo(
     () => [
+      // RM Code - First column
+      {
+        accessorKey: "rm_code",
+        header: "RM Code",
+        cell: ({ row }) => {
+          const rmCode = row.original.rm_code || row.original.referralCode
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                {rmCode}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  copyToClipboard(rmCode)
+                }}
+                title="Copy RM code"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          )
+        },
+      },
+      // Name
       {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => (
           <button
             onClick={() => onView(row.original)}
-            className="text-primary hover:underline font-medium"
+            className="text-primary hover:underline font-medium text-left"
           >
             {row.original.name}
           </button>
         ),
       },
+      // Email
       {
         accessorKey: "email",
         header: "Email",
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.email}</span>
+        ),
       },
+      // Mobile/Phone
       {
-        accessorKey: "mobile",
+        accessorKey: "phone_number",
         header: "Mobile",
-      },
-      {
-        accessorKey: "referralCode",
-        header: "Referral Code",
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <span>{row.original.referralCode}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => {
-                navigator.clipboard.writeText(row.original.referralCode)
-                toast.success("Referral code copied!")
-              }}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
+          <span className="text-sm">
+            {row.original.phone_number || row.original.mobile}
+          </span>
         ),
       },
+      // Partners Count - Clickable
       {
-        accessorKey: "partnersCount",
+        accessorKey: "partner_count",
         header: "Partners",
-        cell: ({ row }) => (
-          <button
-            onClick={() => onAssignPartners(row.original)}
-            className="text-primary hover:underline"
-          >
-            {row.original.partnersCount}
-          </button>
-        ),
+        cell: ({ row }) => {
+          const count = row.original.partner_count ?? row.original.partnersCount ?? 0
+          return (
+            <button
+              onClick={() => {
+                if (onViewPartners) {
+                  onViewPartners(row.original)
+                } else if (onAssignPartners) {
+                  onAssignPartners(row.original)
+                }
+              }}
+              className="text-primary hover:underline font-medium"
+              title="View partners"
+            >
+              {count}
+            </button>
+          )
+        },
       },
-      {
-        accessorKey: "totalInvestors",
-        header: "Total Investors",
-      },
+      // Status
       {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
+      // Created Date
       {
-        accessorKey: "createdDate",
+        accessorKey: "created_at",
         header: "Created Date",
-        cell: ({ row }) => format(new Date(row.original.createdDate), "MMM dd, yyyy"),
+        cell: ({ row }) => {
+          const date = row.original.created_at || row.original.createdDate
+          if (!date) return "-"
+          try {
+            return format(new Date(date), "MMM dd, yyyy")
+          } catch {
+            return date
+          }
+        },
       },
+      // Actions
       {
         id: "actions",
         header: "Actions",
@@ -124,7 +166,7 @@ const RMsTable = ({ data, onView, onEdit, onDelete, onAssignPartners }) => {
         ),
       },
     ],
-    [onView, onEdit, onDelete, onAssignPartners]
+    [onView, onEdit, onDelete, onAssignPartners, onViewPartners]
   )
 
   const table = useReactTable({
@@ -163,7 +205,7 @@ const RMsTable = ({ data, onView, onEdit, onDelete, onAssignPartners }) => {
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
+                No RMs found.
               </TableCell>
             </TableRow>
           )}
