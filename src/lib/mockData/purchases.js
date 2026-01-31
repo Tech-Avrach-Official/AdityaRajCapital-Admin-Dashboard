@@ -1,0 +1,87 @@
+// Mock data for purchases (payment verification)
+// Aligned with INVESTOR_PLAN_PURCHASE_APIS.md - Admin List Pending Verifications response structure
+// API returns: id, investor_id, plan_id, plan_name, amount, payment_proof_file_path,
+// payment_proof_uploaded_at, initialized_at, created_at
+// investor_name/email added for mock UI (API may not include in list)
+
+export const mockPendingPurchases = [
+  {
+    id: 1,
+    investor_id: 42,
+    investor_name: "Rajesh Kumar",
+    investor_email: "rajesh.kumar@example.com",
+    plan_id: 1,
+    plan_name: "ACPL MAX YIELD PLAN (5+5)",
+    amount: 100000,
+    payment_proof_file_path: "investors/42/purchases/1/payment-proof.jpg",
+    payment_proof_url: "https://placehold.co/800x600/e2e8f0/64748b?text=Payment+Proof+1",
+    payment_proof_uploaded_at: "2025-01-28T10:30:00Z",
+    initialized_at: "2025-01-28T09:15:00Z",
+    created_at: "2025-01-28T09:15:00Z",
+    status: "payment_verification",
+  },
+  {
+    id: 2,
+    investor_id: 43,
+    investor_name: "Priya Sharma",
+    investor_email: "priya.sharma@example.com",
+    plan_id: 2,
+    plan_name: "Silver Investment Plan (6 Months)",
+    amount: 250000,
+    payment_proof_file_path: "investors/43/purchases/2/payment-proof.pdf",
+    payment_proof_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    payment_proof_uploaded_at: "2025-01-29T14:20:00Z",
+    initialized_at: "2025-01-29T13:45:00Z",
+    created_at: "2025-01-29T13:45:00Z",
+    status: "payment_verification",
+  },
+  {
+    id: 3,
+    investor_id: 44,
+    investor_name: "Amit Patel",
+    investor_email: "amit.patel@example.com",
+    plan_id: 1,
+    plan_name: "ACPL MAX YIELD PLAN (5+5)",
+    amount: 500000,
+    payment_proof_file_path: "investors/44/purchases/3/payment-proof.jpg",
+    payment_proof_url: "https://placehold.co/800x600/e2e8f0/64748b?text=Payment+Proof+3",
+    payment_proof_uploaded_at: "2025-01-30T11:15:00Z",
+    initialized_at: "2025-01-30T10:00:00Z",
+    created_at: "2025-01-30T10:00:00Z",
+    status: "payment_verification",
+  },
+  {
+    id: 4,
+    investor_id: 45,
+    investor_name: "Sneha Reddy",
+    investor_email: "sneha.reddy@example.com",
+    plan_id: 1,
+    plan_name: "ACPL MAX YIELD PLAN (5+5)",
+    amount: 100000,
+    payment_proof_file_path: "investors/45/purchases/4/payment-proof.png",
+    payment_proof_url: "https://placehold.co/800x600/e2e8f0/64748b?text=Payment+Proof+4",
+    payment_proof_uploaded_at: "2025-01-30T16:45:00Z",
+    initialized_at: "2025-01-30T15:30:00Z",
+    created_at: "2025-01-30T15:30:00Z",
+    status: "payment_verification",
+  },
+  {
+    id: 5,
+    investor_id: 46,
+    investor_name: "Vikram Singh",
+    investor_email: "vikram.singh@example.com",
+    plan_id: 3,
+    plan_name: "Platinum Investment Plan (24 Months)",
+    amount: 1000000,
+    payment_proof_file_path: "investors/46/purchases/5/payment-proof.jpg",
+    payment_proof_url: "https://placehold.co/800x600/e2e8f0/64748b?text=Payment+Proof+5",
+    payment_proof_uploaded_at: "2025-01-31T09:00:00Z",
+    initialized_at: "2025-01-31T08:00:00Z",
+    created_at: "2025-01-31T08:00:00Z",
+    status: "payment_verification",
+  },
+]
+
+// Track verified and rejected purchases for mock data
+export const mockVerifiedPurchases = []
+export const mockRejectedPurchases = []

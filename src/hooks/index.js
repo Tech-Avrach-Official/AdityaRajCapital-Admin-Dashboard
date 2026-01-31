@@ -7,6 +7,7 @@ export { useAppDispatch, useAppSelector } from "@/store"
 export { useAuth } from "./useAuth"
 export { useRMs } from "./useRMs"
 export { usePartners } from "./usePartners"
+export { usePurchases } from "./usePurchases"
 
 // Additional hooks can be added here as needed:
 // export { useInvestors } from "./useInvestors"

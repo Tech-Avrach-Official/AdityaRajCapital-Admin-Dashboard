@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Wallet,
   Percent,
+  CreditCard,
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -99,6 +100,12 @@ const AdminSidebar = ({ onMobileClose }) => {
           name: "Commissions",
           path: "/admin/financial/commissions",
           icon: Percent,
+        },
+        {
+          id: "payment-verification",
+          name: "Payment Verification",
+          path: "/admin/financial/payment-verification",
+          icon: CreditCard,
         },
       ],
     },

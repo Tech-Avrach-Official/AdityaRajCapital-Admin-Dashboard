@@ -4,6 +4,8 @@ export const endpoints = {
   // Admin Authentication
   admin: {
     login: "/api/admin/login",
+    investorKycDocuments: (investorId) => `/api/admin/investors/${investorId}/kyc-documents`,
+    investorPurchases: (investorId) => `/api/admin/investors/${investorId}/purchases`,
   },
 
   // RM Management (Admin)
@@ -54,9 +56,8 @@ export const endpoints = {
   },
 
   // Financial
+  // Note: /api/financial/investments does NOT exist (404). Use purchases.pendingVerification instead.
   financial: {
-    investments: "/api/financial/investments",
-    investment: (id) => `/api/financial/investments/${id}`,
     payouts: "/api/financial/payouts",
     payout: (id) => `/api/financial/payouts/${id}`,
     uploadPdf: "/api/financial/payouts/upload-pdf",
@@ -90,4 +91,18 @@ export const endpoints = {
     logs: "/api/audit/logs",
     export: "/api/audit/export",
   },
+
+  // Purchases (Payment Verification) - see docs/ADMIN_INVESTORS_INVESTMENTS_IMPLEMENTATION_GUIDE.md
+  purchases: {
+    list: "/api/admin/purchases",
+    stats: "/api/admin/purchases/stats",
+    pendingVerification: "/api/admin/purchases/pending-verification",
+    get: (id) => `/api/admin/purchases/${id}`,
+    paymentProofUrl: (id) => `/api/admin/purchases/${id}/payment-proof-url`,
+    verifyPayment: (id) => `/api/admin/purchases/${id}/verify-payment`,
+    rejectPayment: (id) => `/api/admin/purchases/${id}/reject-payment`,
+  },
+
+  // Investor plans (catalog - no auth)
+  investorPlans: "/api/investor/plans",
 }

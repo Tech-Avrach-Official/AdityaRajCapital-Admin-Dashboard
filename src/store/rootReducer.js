@@ -13,6 +13,7 @@ import financialReducer from "./features/financial/financialSlice"
 import kycReducer from "./features/kyc/kycSlice"
 import dashboardReducer from "./features/dashboard/dashboardSlice"
 import uiReducer from "./features/ui/uiSlice"
+import purchasesReducer from "./features/purchases/purchaseSlice"
 
 /**
  * Root reducer combining all feature slices
@@ -40,6 +41,7 @@ const rootReducer = combineReducers({
   kyc: kycReducer,
   dashboard: dashboardReducer,
   ui: uiReducer,
+  purchases: purchasesReducer,
 })
 
 export default rootReducer

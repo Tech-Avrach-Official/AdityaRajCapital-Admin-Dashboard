@@ -603,9 +603,23 @@ export const usersService = {
     }
 
     const response = await apiClient.get(endpoints.users.investors, { params })
+    const resData = response.data?.data ?? response.data
+    const investors = resData?.investors ?? resData ?? []
+    const total = resData?.count ?? resData?.total ?? investors.length
+
+    // Normalize API fields to UI format (client_id → investorId, partner → partnerName, kyc_complete → kycStatus)
+    const normalizedData = Array.isArray(investors)
+      ? investors.map((inv) => ({
+          ...inv,
+          investorId: inv.client_id ?? inv.investorId,
+          partnerName: inv.partner?.partner_name ?? inv.partnerName ?? null,
+          kycStatus: inv.kyc_complete === 1 ? "verified" : inv.kyc_complete === 0 ? "pending" : inv.kycStatus ?? "pending",
+        }))
+      : []
+
     return {
-      data: response.data?.data || [],
-      total: response.data?.total || 0,
+      data: normalizedData,
+      total: Array.isArray(investors) ? total : normalizedData.length,
     }
   },
 

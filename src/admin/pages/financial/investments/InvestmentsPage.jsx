@@ -101,7 +101,7 @@ const InvestmentsPage = () => {
         header: "Investor",
         cell: ({ row }) => (
           <button className="text-primary hover:underline">
-            {row.original.investorName}
+            {row.original.investorName || row.original.investorId || "-"}
           </button>
         ),
       },
@@ -110,7 +110,7 @@ const InvestmentsPage = () => {
         header: "Product",
         cell: ({ row }) => (
           <button className="text-primary hover:underline">
-            {row.original.productName}
+            {row.original.productName || row.original.planName || "-"}
           </button>
         ),
       },
@@ -122,7 +122,10 @@ const InvestmentsPage = () => {
       {
         accessorKey: "date",
         header: "Date",
-        cell: ({ row }) => format(new Date(row.original.date), "MMM dd, yyyy"),
+        cell: ({ row }) =>
+          row.original.date
+            ? format(new Date(row.original.date), "MMM dd, yyyy")
+            : "-",
       },
       {
         accessorKey: "status",

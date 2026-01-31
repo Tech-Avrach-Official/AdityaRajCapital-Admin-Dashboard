@@ -10,6 +10,7 @@ import ProductsPage from "../admin/pages/products/ProductsPage"
 import InvestmentsPage from "../admin/pages/financial/investments/InvestmentsPage"
 import PayoutsPage from "../admin/pages/financial/payouts/PayoutsPage"
 import CommissionsPage from "../admin/pages/financial/commissions/CommissionsPage"
+import PaymentVerificationPage from "../admin/pages/financial/payment-verification/PaymentVerificationPage"
 import KYCPage from "../admin/pages/kyc/KYCPage"
 import SettingsPage from "../admin/pages/settings/SettingsPage"
 import AuditPage from "../admin/pages/audit/AuditPage"
@@ -46,6 +47,7 @@ const AllRoutes = () => {
         <Route path="financial/investments" element={<InvestmentsPage />} />
         <Route path="financial/payouts" element={<PayoutsPage />} />
         <Route path="financial/commissions" element={<CommissionsPage />} />
+        <Route path="financial/payment-verification" element={<PaymentVerificationPage />} />
 
         {/* KYC */}
         <Route path="kyc" element={<KYCPage />} />

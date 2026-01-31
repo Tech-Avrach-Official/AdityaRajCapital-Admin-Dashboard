@@ -62,27 +62,41 @@ const InvestorsPage = () => {
       },
       { accessorKey: "email", header: "Email" },
       { accessorKey: "mobile", header: "Mobile" },
-      { accessorKey: "investorId", header: "Investor ID" },
+      {
+        accessorKey: "investorId",
+        header: "Investor ID",
+        cell: ({ row }) => row.original.client_id || row.original.investorId || "-",
+      },
       {
         accessorKey: "partnerName",
         header: "Partner",
-        cell: ({ row }) => row.original.partnerName || "Direct",
+        cell: ({ row }) =>
+          row.original.partner?.partner_name || row.original.partnerName || "Direct",
       },
       {
         accessorKey: "kycStatus",
         header: "KYC Status",
-        cell: ({ row }) => <StatusBadge status={row.original.kycStatus} />,
+        cell: ({ row }) => {
+          const status = row.original.kyc_complete === 1 ? "verified" : row.original.kycStatus ?? "pending"
+          return <StatusBadge status={status} />
+        },
       },
-      { accessorKey: "totalInvestments", header: "Investments" },
+      {
+        accessorKey: "totalInvestments",
+        header: "Investments",
+        cell: ({ row }) => row.original.totalInvestments ?? "-",
+      },
       {
         accessorKey: "totalInvested",
         header: "Total Invested",
         cell: ({ row }) =>
-          new Intl.NumberFormat("en-IN", {
-            style: "currency",
-            currency: "INR",
-            maximumFractionDigits: 0,
-          }).format(row.original.totalInvested),
+          row.original.totalInvested != null
+            ? new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(row.original.totalInvested)
+            : "-",
       },
       {
         accessorKey: "status",
