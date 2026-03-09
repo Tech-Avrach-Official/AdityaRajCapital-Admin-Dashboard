@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePartners } from "@/hooks"
+import { hierarchyService } from "@/lib/api/services"
 
 const PartnersPage = () => {
   // Redux state and actions
@@ -39,6 +40,12 @@ const PartnersPage = () => {
   // Change RM Modal state
   const [changeRMModalOpen, setChangeRMModalOpen] = useState(false)
   const [selectedPartnerForRM, setSelectedPartnerForRM] = useState(null)
+  const [branches, setBranches] = useState([])
+
+  // Load branches on mount
+  useEffect(() => {
+    hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? []))
+  }, [])
 
   // Load partners on mount
   useEffect(() => {
@@ -50,9 +57,22 @@ const PartnersPage = () => {
     updateFilters({ search: value })
   }
 
-  const handleStatusChange = (value) => {
-    updateFilters({ status: value })
-    loadPartners({ status: value !== "all" ? value : undefined })
+  const handleFilterChange = (key, value) => {
+    if (key === "status") {
+      updateFilters({ status: value })
+      loadPartners({
+        status: value !== "all" ? value : undefined,
+        branch_id: filters.branch_id || undefined,
+      })
+      return
+    }
+    if (key === "branch_id") {
+      updateFilters({ branch_id: value })
+      loadPartners({
+        status: filters.status !== "all" ? filters.status : undefined,
+        branch_id: value || undefined,
+      })
+    }
   }
 
   const handleClearFilters = () => {
@@ -152,6 +172,15 @@ const PartnersPage = () => {
         },
       },
       {
+        accessorKey: "branch_name",
+        header: "Branch",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {row.original.branch_name ?? row.original.rm?.branch_name ?? "—"}
+          </span>
+        ),
+      },
+      {
         accessorKey: "investorsCount",
         header: "Investors",
         cell: ({ row }) => (
@@ -225,6 +254,15 @@ const PartnersPage = () => {
         { value: "inactive", label: "Inactive" },
       ],
     },
+    {
+      key: "branch_id",
+      value: filters.branch_id || "all",
+      placeholder: "Branch",
+      options: [
+        { value: "all", label: "All Branches" },
+        ...(branches.map((b) => ({ value: String(b.id), label: b.name })) ?? []),
+      ],
+    },
   ]
 
   // Loading skeleton
@@ -245,9 +283,7 @@ const PartnersPage = () => {
         onSearchChange={handleSearchChange}
         searchPlaceholder="Search by name, email, Partner ID..."
         filters={filterConfig}
-        onFilterChange={(key, value) => {
-          if (key === "status") handleStatusChange(value)
-        }}
+        onFilterChange={handleFilterChange}
         onClearFilters={handleClearFilters}
       />
 

@@ -18,6 +18,9 @@ import PaymentVerificationPage from "../admin/pages/financial/payment-verificati
 import KYCPage from "../admin/pages/kyc/KYCPage"
 import SettingsPage from "../admin/pages/settings/SettingsPage"
 import AuditPage from "../admin/pages/audit/AuditPage"
+import NationsPage from "../admin/pages/hierarchy/NationsPage"
+import StatesPage from "../admin/pages/hierarchy/StatesPage"
+import BranchesPage from "../admin/pages/hierarchy/BranchesPage"
 
 const AllRoutes = () => {
   return (
@@ -38,6 +41,11 @@ const AllRoutes = () => {
         }
       >
         <Route index element={<Dashboard />} />
+
+        {/* Hierarchy */}
+        <Route path="hierarchy/nations" element={<NationsPage />} />
+        <Route path="hierarchy/states" element={<StatesPage />} />
+        <Route path="hierarchy/branches" element={<BranchesPage />} />
 
         {/* User Management */}
         <Route path="users/rms" element={<RMsPage />} />

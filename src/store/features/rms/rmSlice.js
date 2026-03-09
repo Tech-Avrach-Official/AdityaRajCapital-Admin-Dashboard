@@ -82,6 +82,9 @@ const initialState = rmsAdapter.getInitialState({
   filters: {
     search: "",
     status: "all", // "all" | "active" | "inactive"
+    nation_id: "",
+    state_id: "",
+    branch_id: "",
   },
   
   // Pagination

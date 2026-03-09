@@ -87,6 +87,36 @@ const RMsTable = ({ data, onView, onEdit, onDelete, onAssignPartners, onViewPart
           </span>
         ),
       },
+      // Branch
+      {
+        accessorKey: "branch_name",
+        header: "Branch",
+        cell: ({ row }) => (
+          <span className="text-sm">
+            {row.original.branch_name ?? "—"}
+          </span>
+        ),
+      },
+      // State
+      {
+        accessorKey: "state_name",
+        header: "State",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {row.original.state_name ?? "—"}
+          </span>
+        ),
+      },
+      // Nation
+      {
+        accessorKey: "nation_name",
+        header: "Nation",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {row.original.nation_name ?? "—"}
+          </span>
+        ),
+      },
       // Partners Count - Clickable
       {
         accessorKey: "partner_count",

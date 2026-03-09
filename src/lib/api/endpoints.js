@@ -102,6 +102,29 @@ export const endpoints = {
     export: "/api/audit/export",
   },
 
+  // Hierarchy (Nation → State → Branch) - see docs/HIERARCHY_FRONTEND_GUIDE.md
+  hierarchy: {
+    nations: {
+      list: "/api/admin/nations",
+      get: (id) => `/api/admin/nations/${id}`,
+      create: "/api/admin/nations",
+      update: (id) => `/api/admin/nations/${id}`,
+      delete: (id) => `/api/admin/nations/${id}`,
+    },
+    states: {
+      list: "/api/admin/states",
+      get: (id) => `/api/admin/states/${id}`,
+      assignNation: (id) => `/api/admin/states/${id}/nation`,
+    },
+    branches: {
+      list: "/api/admin/branches",
+      get: (id) => `/api/admin/branches/${id}`,
+      create: "/api/admin/branches",
+      update: (id) => `/api/admin/branches/${id}`,
+      delete: (id) => `/api/admin/branches/${id}`,
+    },
+  },
+
   // Purchases (Payment Verification) - see docs/ADMIN_INVESTORS_INVESTMENTS_IMPLEMENTATION_GUIDE.md
   purchases: {
     list: "/api/admin/purchases",

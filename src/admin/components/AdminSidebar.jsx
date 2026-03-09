@@ -17,6 +17,9 @@ import {
   Wallet,
   Percent,
   CreditCard,
+  MapPin,
+  Building2,
+  Globe,
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -46,6 +49,31 @@ const AdminSidebar = ({ onMobileClose }) => {
       name: "Dashboard",
       icon: LayoutDashboard,
       path: "/admin",
+    },
+    {
+      id: "hierarchy",
+      name: "Hierarchy",
+      icon: Globe,
+      subItems: [
+        {
+          id: "nations",
+          name: "Nations",
+          path: "/admin/hierarchy/nations",
+          icon: Globe,
+        },
+        {
+          id: "states",
+          name: "States",
+          path: "/admin/hierarchy/states",
+          icon: MapPin,
+        },
+        {
+          id: "branches",
+          name: "Branches",
+          path: "/admin/hierarchy/branches",
+          icon: Building2,
+        },
+      ],
     },
     {
       id: "users",

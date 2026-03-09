@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2 } from "lucide-react"
 import toast from "react-hot-toast"
+import { hierarchyService } from "@/lib/api/services"
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,8 @@ const rmEditSchema = z.object({
 
 const EditRMModal = ({ open, onOpenChange, rm, onSuccess }) => {
   const [loading, setLoading] = useState(false)
+  const [branches, setBranches] = useState([])
+  const [selectedBranchId, setSelectedBranchId] = useState("")
 
   const {
     register,
@@ -59,7 +62,13 @@ const EditRMModal = ({ open, onOpenChange, rm, onSuccess }) => {
 
   const status = watch("status")
 
-  // Reset form when rm changes
+  // Load branches when modal opens
+  useEffect(() => {
+    if (!open) return
+    hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? []))
+  }, [open])
+
+  // Reset form and branch when rm changes
   useEffect(() => {
     if (rm && open) {
       reset({
@@ -68,6 +77,7 @@ const EditRMModal = ({ open, onOpenChange, rm, onSuccess }) => {
         phone_number: rm.phone_number || rm.mobile || "",
         status: rm.status || "active",
       })
+      setSelectedBranchId(rm.branch_id != null ? String(rm.branch_id) : "none")
     }
   }, [rm, open, reset])
 
@@ -88,12 +98,18 @@ const EditRMModal = ({ open, onOpenChange, rm, onSuccess }) => {
     setLoading(true)
 
     try {
-      const response = await apiClient.put(endpoints.rm.update(rm.id), {
+      const payload = {
         name: data.name.trim(),
         email: data.email.trim().toLowerCase(),
         phone_number: data.phone_number.trim(),
         status: data.status,
-      })
+      }
+      if (selectedBranchId === "none") {
+        payload.branch_id = null
+      } else if (selectedBranchId) {
+        payload.branch_id = Number(selectedBranchId)
+      }
+      const response = await apiClient.put(endpoints.rm.update(rm.id), payload)
 
       if (response.data?.success) {
         toast.success("RM updated successfully")
@@ -199,6 +215,31 @@ const EditRMModal = ({ open, onOpenChange, rm, onSuccess }) => {
             {errors.status && (
               <p className="text-sm text-destructive">{errors.status.message}</p>
             )}
+          </div>
+
+          {/* Branch */}
+          <div className="space-y-2">
+            <Label>Branch</Label>
+            <Select
+              value={selectedBranchId}
+              onValueChange={setSelectedBranchId}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name} {b.state_name ? `(${b.state_name})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Assign or unassign this RM to a branch.
+            </p>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">

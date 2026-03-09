@@ -22,17 +22,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { usersService } from "@/lib/api/services"
+import { usersService, hierarchyService } from "@/lib/api/services"
 
 const InvestorsPage = () => {
   const [investors, setInvestors] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
   const [kycStatusFilter, setKycStatusFilter] = useState("all")
+  const [branchFilterId, setBranchFilterId] = useState("all")
+  const [branches, setBranches] = useState([])
+
+  useEffect(() => {
+    hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? []))
+  }, [])
 
   useEffect(() => {
     loadInvestors()
-  }, [searchValue, kycStatusFilter])
+  }, [searchValue, kycStatusFilter, branchFilterId])
 
   const loadInvestors = async () => {
     setLoading(true)
@@ -40,6 +46,7 @@ const InvestorsPage = () => {
       const response = await usersService.getInvestors({
         search: searchValue,
         kycStatus: kycStatusFilter !== "all" ? kycStatusFilter : undefined,
+        branch_id: branchFilterId && branchFilterId !== "all" ? branchFilterId : undefined,
       })
       setInvestors(response.data)
     } catch (error) {
@@ -148,6 +155,15 @@ const InvestorsPage = () => {
         { value: "rejected", label: "Rejected" },
       ],
     },
+    {
+      key: "branch_id",
+      value: branchFilterId,
+      placeholder: "Branch",
+      options: [
+        { value: "all", label: "All Branches" },
+        ...(branches.map((b) => ({ value: String(b.id), label: b.name })) ?? []),
+      ],
+    },
   ]
 
   return (
@@ -161,10 +177,12 @@ const InvestorsPage = () => {
         filters={filters}
         onFilterChange={(key, value) => {
           if (key === "kycStatus") setKycStatusFilter(value)
+          if (key === "branch_id") setBranchFilterId(value)
         }}
         onClearFilters={() => {
           setSearchValue("")
           setKycStatusFilter("all")
+          setBranchFilterId("all")
         }}
       />
 

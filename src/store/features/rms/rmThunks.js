@@ -19,15 +19,19 @@ export const fetchRMs = createAsyncThunk(
       const queryParams = {
         search: params.search ?? currentFilters.search,
         status: params.status ?? currentFilters.status,
+        nation_id: params.nation_id ?? currentFilters.nation_id,
+        state_id: params.state_id ?? currentFilters.state_id,
+        branch_id: params.branch_id ?? currentFilters.branch_id,
         page: params.page ?? currentPagination.page,
         limit: params.limit ?? currentPagination.limit,
         ...params,
       }
       
-      // Remove "all" status as it means no filter
-      if (queryParams.status === "all") {
-        delete queryParams.status
-      }
+      // Remove "all" or empty filters
+      if (queryParams.status === "all") delete queryParams.status
+      if (!queryParams.nation_id) delete queryParams.nation_id
+      if (!queryParams.state_id) delete queryParams.state_id
+      if (!queryParams.branch_id) delete queryParams.branch_id
       
       const result = await usersService.getRMs(queryParams)
       return result
@@ -211,8 +215,10 @@ export const completeRMSignup = createAsyncThunk(
   async (signupRequestId, { rejectWithValue }) => {
     try {
       const result = await usersService.completeRMSignup(signupRequestId)
-      if (result.success) {
-        return result.data
+      if (result.success && result.data) {
+        // API returns rm_id; adapter expects id
+        const data = result.data
+        return { ...data, id: data.id ?? data.rm_id }
       }
       return rejectWithValue(result.message || "Failed to complete signup")
     } catch (error) {

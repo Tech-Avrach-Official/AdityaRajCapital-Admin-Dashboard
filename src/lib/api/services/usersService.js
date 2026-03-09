@@ -173,7 +173,7 @@ export const usersService = {
 
     const response = await apiClient.post(endpoints.rm.verifyMobileOtp, {
       signup_request_id: signupRequestId,
-      otp,
+      mobile_otp: otp,
     })
     return response.data
   },
@@ -201,7 +201,7 @@ export const usersService = {
 
     const response = await apiClient.post(endpoints.rm.verifyEmailOtp, {
       signup_request_id: signupRequestId,
-      otp,
+      email_otp: otp,
     })
     return response.data
   },

@@ -10,6 +10,8 @@ import {
   Phone,
   Mail,
   RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import toast from "react-hot-toast"
 import {
@@ -24,7 +26,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import ImageDropzone from "@/components/common/ImageDropzone"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useRMs } from "@/hooks"
+import { hierarchyService } from "@/lib/api/services"
 
 // Validation schema for RM creation
 const rmSchema = z.object({
@@ -156,6 +166,15 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     aadhaarFront: "",
     panImage: "",
   })
+  // Hierarchy for branch selection
+  const [nations, setNations] = useState([])
+  const [states, setStates] = useState([])
+  const [branches, setBranches] = useState([])
+  const [selectedNationId, setSelectedNationId] = useState("")
+  const [selectedStateId, setSelectedStateId] = useState("")
+  const [selectedBranchId, setSelectedBranchId] = useState("")
+  const [hierarchyLoading, setHierarchyLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // OTP inputs
   const [mobileOtp, setMobileOtp] = useState("")
@@ -199,6 +218,62 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     },
   })
 
+  // Load hierarchy when modal opens
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setHierarchyLoading(true)
+    hierarchyService
+      .getNations()
+      .then(({ nations: list }) => {
+        if (!cancelled) setNations(list ?? [])
+      })
+      .finally(() => {
+        if (!cancelled) setHierarchyLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [open])
+
+  useEffect(() => {
+    if (!selectedNationId) {
+      setStates([])
+      setBranches([])
+      setSelectedStateId("")
+      setSelectedBranchId("")
+      return
+    }
+    let cancelled = false
+    hierarchyService
+      .getStates({ nation_id: Number(selectedNationId) })
+      .then(({ states: list }) => {
+        if (!cancelled) {
+          setStates(list ?? [])
+          setSelectedStateId("")
+          setSelectedBranchId("")
+          setBranches([])
+        }
+      })
+    return () => { cancelled = true }
+  }, [selectedNationId])
+
+  useEffect(() => {
+    if (!selectedStateId) {
+      setBranches([])
+      setSelectedBranchId("")
+      return
+    }
+    let cancelled = false
+    hierarchyService
+      .getBranches({ state_id: Number(selectedStateId) })
+      .then(({ branches: list }) => {
+        if (!cancelled) {
+          setBranches(list ?? [])
+          setSelectedBranchId("")
+        }
+      })
+    return () => { cancelled = true }
+  }, [selectedStateId])
+
   const steps = [
     { id: 1, name: "Details" },
     { id: 2, name: "Mobile OTP" },
@@ -234,6 +309,13 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     setAadhaarFrontFile(null)
     setPanImageFile(null)
     setFileErrors({ aadhaarFront: "", panImage: "" })
+    setSelectedNationId("")
+    setSelectedStateId("")
+    setSelectedBranchId("")
+    setNations([])
+    setStates([])
+    setBranches([])
+    setShowPassword(false)
     setMobileOtp("")
     setEmailOtp("")
     setMobileResendTimer(0)
@@ -274,14 +356,21 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
       toast.error("Please upload both Aadhaar and PAN documents")
       return
     }
+    const branchId = selectedBranchId ? Number(selectedBranchId) : null
+    if (!branchId || branchId < 1) {
+      toast.error("Please select a branch")
+      return
+    }
 
-    setFormData(data)
+    const branchName = branches.find((b) => b.id === branchId)?.name ?? "Branch"
+    setFormData({ ...data, branch_id: branchId, branch_name: branchName })
 
     const formDataObj = new FormData()
     formDataObj.append("name", data.name.trim())
     formDataObj.append("email", data.email.trim().toLowerCase())
     formDataObj.append("phone_number", data.phone_number.trim())
     formDataObj.append("password", data.password)
+    formDataObj.append("branch_id", branchId)
     formDataObj.append("rm_aadhaar_front", aadhaarFrontFile)
     formDataObj.append("rm_pan_image", panImageFile)
 
@@ -429,15 +518,103 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
             {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                placeholder="Min 6 characters"
-                disabled={otpLoading.initiating}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  placeholder="Min 6 characters"
+                  disabled={otpLoading.initiating}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+
+            {/* Branch (Nation → State → Branch) */}
+            <div className="space-y-3">
+              <Label>Branch *</Label>
+              <p className="text-xs text-muted-foreground">
+                Select Nation, then State, then Branch. Every RM must be assigned to a branch.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Nation</Label>
+                  <Select
+                    value={selectedNationId}
+                    onValueChange={setSelectedNationId}
+                    disabled={otpLoading.initiating || hierarchyLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select nation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nations.map((n) => (
+                        <SelectItem key={n.id} value={String(n.id)}>
+                          {n.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">State</Label>
+                  <Select
+                    value={selectedStateId}
+                    onValueChange={setSelectedStateId}
+                    disabled={!selectedNationId || otpLoading.initiating || hierarchyLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {states.map((s) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Branch</Label>
+                  <Select
+                    value={selectedBranchId}
+                    onValueChange={setSelectedBranchId}
+                    disabled={!selectedStateId || otpLoading.initiating || hierarchyLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {!selectedBranchId && (selectedStateId || selectedNationId) && (
+                <p className="text-xs text-amber-600">
+                  Please select a branch to continue.
+                </p>
               )}
             </div>
 
@@ -667,6 +844,10 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Email:</span>
                 <span className="font-medium">{formData?.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Branch:</span>
+                <span className="font-medium">{formData?.branch_name ?? "—"}</span>
               </div>
             </div>
 

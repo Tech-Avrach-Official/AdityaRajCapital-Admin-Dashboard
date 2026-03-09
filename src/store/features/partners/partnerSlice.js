@@ -32,6 +32,7 @@ const initialState = partnersAdapter.getInitialState({
     status: "all",
     rmId: null,
     kycStatus: "all",
+    branch_id: "",
   },
   
   pagination: {
