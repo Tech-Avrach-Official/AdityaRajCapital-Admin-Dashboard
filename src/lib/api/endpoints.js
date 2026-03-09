@@ -4,9 +4,15 @@ export const endpoints = {
   // Admin Authentication
   admin: {
     login: "/api/admin/login",
+    getInvestor: (investorId) => `/api/admin/investors/${investorId}`,
+    investorKycData: (investorId) => `/api/admin/investors/${investorId}/kyc-data`,
     investorKycDocuments: (investorId) => `/api/admin/investors/${investorId}/kyc-documents`,
-    partnerKycDocuments: (partnerId) => `/api/admin/partners/${partnerId}/kyc-documents`,
+    investorBankAccounts: (investorId) => `/api/admin/investors/${investorId}/bank-accounts`,
+    investorNominees: (investorId) => `/api/admin/investors/${investorId}/nominees`,
+    nomineeDocuments: (investorId, nomineeId) =>
+      `/api/admin/investors/${investorId}/nominees/${nomineeId}/documents`,
     investorPurchases: (investorId) => `/api/admin/investors/${investorId}/purchases`,
+    partnerKycDocuments: (partnerId) => `/api/admin/partners/${partnerId}/kyc-documents`,
   },
 
   // RM Management (Admin)
@@ -132,13 +138,15 @@ export const endpoints = {
     },
   },
 
-  // Purchases (Payment Verification) - see docs/ADMIN_INVESTORS_INVESTMENTS_IMPLEMENTATION_GUIDE.md
+  // Purchases (Payment Verification) - see docs/INVESTOR_MODULE_FRONTEND_GUIDE.md
   purchases: {
     list: "/api/admin/purchases",
     stats: "/api/admin/purchases/stats",
     pendingVerification: "/api/admin/purchases/pending-verification",
     get: (id) => `/api/admin/purchases/${id}`,
     paymentProofUrl: (id) => `/api/admin/purchases/${id}/payment-proof-url`,
+    signedDeedUrl: (id) => `/api/admin/purchases/${id}/signed-deed-url`,
+    installments: (id) => `/api/admin/purchases/${id}/installments`,
     verifyPayment: (id) => `/api/admin/purchases/${id}/verify-payment`,
     rejectPayment: (id) => `/api/admin/purchases/${id}/reject-payment`,
   },

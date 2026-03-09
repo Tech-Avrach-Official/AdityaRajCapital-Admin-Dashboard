@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   Phone,
   Banknote,
 } from "lucide-react"
+import { toast } from "react-hot-toast"
 import StatusBadge from "@/components/common/StatusBadge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,7 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { mockInvestmentDetail, getMockInvestorById } from "@/lib/mockData/investors"
+import { Skeleton } from "@/components/ui/skeleton"
+import { usersService, purchasesService } from "@/lib/api/services"
+import NomineeDocumentsModal from "./components/NomineeDocumentsModal"
+import PaymentProofModal from "@/admin/pages/financial/payment-verification/components/PaymentProofModal"
 import { cn } from "@/lib/utils"
 
 const formatDate = (d) =>
@@ -57,17 +61,138 @@ const getInitials = (name) =>
     .toUpperCase()
     .slice(0, 2)
 
-const InvestmentDetailPage = () => {
-  const { investorId, investmentId } = useParams()
+/** Map API installments to table rows */
+function mapInstallments(apiInstallments) {
+  const list = apiInstallments?.installments ?? []
+  return list.map((row) => ({
+    seq: row.installment_number ?? row.installment_id ?? 0,
+    period: row.period_label ?? row.period ?? "—",
+    payout_window: row.payout_window_label ?? row.payout_window ?? "—",
+    gross: row.gross_amount ?? row.gross ?? 0,
+    tds_percent: row.tds_percent ?? 0,
+    tds_amount: row.tds_amount ?? 0,
+    receivable: row.receivable_amount ?? row.receivable ?? 0,
+    status: row.status ?? "pending",
+    paid_at: row.paid_at ?? null,
+  }))
+}
 
-  const investment = { ...mockInvestmentDetail }
-  const investor = getMockInvestorById(investorId) || {
-    id: investorId,
-    client_id: investment.investor_client_id,
-    name: investment.investor_name,
+const InvestmentDetailPage = () => {
+  const { investorId, investmentId: purchaseId } = useParams()
+  const [purchase, setPurchase] = useState(null)
+  const [installmentsData, setInstallmentsData] = useState(null)
+  const [nominees, setNominees] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [deedLoading, setDeedLoading] = useState(false)
+  const [nomineeModalNominee, setNomineeModalNominee] = useState(null)
+  const [paymentProofModalOpen, setPaymentProofModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (!purchaseId) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    purchasesService
+      .getPurchase(purchaseId)
+      .then((data) => setPurchase(data ?? null))
+      .catch(() => {
+        toast.error("Failed to load investment")
+        setPurchase(null)
+      })
+      .finally(() => setLoading(false))
+  }, [purchaseId])
+
+  useEffect(() => {
+    if (!purchaseId) return
+    purchasesService
+      .getInstallments(purchaseId)
+      .then(setInstallmentsData)
+      .catch(() => setInstallmentsData({ installments: [], summary: null }))
+  }, [purchaseId])
+
+  useEffect(() => {
+    const investorIdFromPurchase = purchase?.investor_id ?? investorId
+    if (!investorIdFromPurchase) {
+      setNominees([])
+      return
+    }
+    usersService
+      .getInvestorNominees(investorIdFromPurchase)
+      .then(setNominees)
+      .catch(() => setNominees([]))
+  }, [purchase?.investor_id, investorId])
+
+  const installments = useMemo(() => mapInstallments(installmentsData), [installmentsData])
+  const summary = installmentsData?.summary ?? null
+  const investor = purchase?.investor ?? null
+  const displayName = investor?.name || investor?.client_id || "Investor"
+  const bankAccount = purchase?.bank_account ?? null
+  const planSnapshot = purchase?.plan_snapshot ?? null
+  const planDetails = planSnapshot?.investment_details ?? purchase?.plan?.investment_details ?? {}
+
+  const handleViewDeed = async () => {
+    if (purchase?.signed_deed_url) {
+      window.open(purchase.signed_deed_url, "_blank", "noopener,noreferrer")
+      return
+    }
+    setDeedLoading(true)
+    try {
+      const url = await purchasesService.getSignedDeedUrl(purchaseId)
+      if (url) window.open(url, "_blank", "noopener,noreferrer")
+      else toast.error("Deed not available")
+    } catch {
+      toast.error("Failed to load deed")
+    } finally {
+      setDeedLoading(false)
+    }
   }
 
-  const displayName = investment.investor_name || investment.investor_client_id || "Investor"
+  const timeline = useMemo(() => {
+    if (!purchase) return []
+    const items = []
+    if (purchase.initialized_at)
+      items.push({ label: "Investment initialized", date: purchase.initialized_at, time: null })
+    if (purchase.payment_proof_uploaded_at)
+      items.push({ label: "Payment proof uploaded", date: purchase.payment_proof_uploaded_at, time: null })
+    if (purchase.payment_verified_at)
+      items.push({ label: "Payment verified", date: purchase.payment_verified_at, time: null })
+    if (purchase.payment_rejected_at)
+      items.push({ label: "Payment rejected", date: purchase.payment_rejected_at, time: null })
+    if (purchase.leegality_signing_status === "signed")
+      items.push({ label: "Deed signed", date: purchase.updated_at || purchase.created_at, time: null })
+    items.push({ label: "Status: " + (purchase.status || "—"), date: purchase.updated_at || purchase.created_at, time: null })
+    return items
+  }, [purchase])
+
+  if (loading && !purchase) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!purchase) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to={investorId ? `/admin/users/investors/${investorId}` : "/admin/users/investors"} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+        </Button>
+        <p className="text-muted-foreground">Investment not found.</p>
+      </div>
+    )
+  }
+
+  const investmentDisplayId = purchase.investment_display_id || purchase.id
+  const planName = purchase.plan_name ?? purchase.plan?.name ?? planSnapshot?.name ?? "—"
 
   return (
     <div className="space-y-8">
@@ -78,15 +203,13 @@ const InvestmentDetailPage = () => {
         </Link>
         <ChevronRight className="h-4 w-4 shrink-0" />
         <Link
-          to={`/admin/users/investors/${investor.id || investorId}`}
+          to={`/admin/users/investors/${purchase.investor_id ?? investorId}`}
           className="hover:text-foreground transition-colors truncate max-w-[180px]"
         >
           {displayName}
         </Link>
         <ChevronRight className="h-4 w-4 shrink-0" />
-        <span className="font-medium text-foreground truncate">
-          {investment.display_id || investment.investment_id}
-        </span>
+        <span className="font-medium text-foreground truncate">{investmentDisplayId}</span>
       </nav>
 
       {/* Hero header */}
@@ -95,7 +218,7 @@ const InvestmentDetailPage = () => {
           <div className="space-y-4">
             <Button variant="ghost" size="sm" asChild className="-ml-2 shrink-0">
               <Link
-                to={`/admin/users/investors/${investor.id || investorId}`}
+                to={`/admin/users/investors/${purchase.investor_id ?? investorId}`}
                 className="gap-2 text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -107,17 +230,11 @@ const InvestmentDetailPage = () => {
                 <Wallet className="h-7 w-7" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  {investment.display_id || investment.investment_id}
-                </h1>
-                <p className="mt-0.5 text-lg font-medium text-muted-foreground">
-                  {investment.plan_name}
-                </p>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">{investmentDisplayId}</h1>
+                <p className="mt-0.5 text-lg font-medium text-muted-foreground">{planName}</p>
                 <div className="mt-2 flex items-center gap-3">
-                  <StatusBadge status={investment.status || "active"} />
-                  <span className="text-2xl font-bold tabular-nums text-foreground">
-                    {formatINR(investment.amount)}
-                  </span>
+                  <StatusBadge status={purchase.status || "active"} />
+                  <span className="text-2xl font-bold tabular-nums text-foreground">{formatINR(purchase.amount)}</span>
                 </div>
               </div>
             </div>
@@ -126,15 +243,13 @@ const InvestmentDetailPage = () => {
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">Investor</p>
                 <Link
-                  to={`/admin/users/investors/${investor.id || investorId}`}
+                  to={`/admin/users/investors/${purchase.investor_id ?? investorId}`}
                   className="font-semibold text-primary hover:underline"
                 >
                   {displayName}
                 </Link>
-                {investment.investor_client_id && (
-                  <span className="ml-2 font-mono text-sm text-muted-foreground">
-                    {investment.investor_client_id}
-                  </span>
+                {investor?.client_id && (
+                  <span className="ml-2 font-mono text-sm text-muted-foreground">{investor.client_id}</span>
                 )}
               </div>
             </div>
@@ -154,122 +269,88 @@ const InvestmentDetailPage = () => {
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                label: "Display ID",
-                value: investment.summary?.display_id || investment.display_id,
-                mono: true,
-              },
-              { label: "Plan name", value: investment.summary?.plan_name || investment.plan_name },
-              {
-                label: "Amount",
-                value: formatINR(investment.summary?.amount ?? investment.amount),
-                highlight: true,
-              },
-              {
-                label: "Status",
-                node: <StatusBadge status={investment.summary?.status || investment.status} />,
-              },
-              {
-                label: "Initialized",
-                value: formatDate(investment.summary?.initialized_at || investment.initialized_at),
-              },
-              {
-                label: "Payment proof uploaded",
-                value: formatDate(investment.summary?.payment_proof_uploaded_at || investment.payment_proof_uploaded_at),
-              },
-              {
-                label: "Payment verified",
-                value: formatDate(investment.summary?.payment_verified_at || investment.payment_verified_at),
-              },
-              {
-                label: "Cheque number",
-                value: investment.summary?.cheque_number ?? investment.cheque_number ?? "—",
-              },
-              {
-                label: "Partner",
-                value: investment.summary?.partner ?? investment.partner,
-                span: 2,
-              },
-            ].map(({ label, value, node, mono, highlight, span }) => (
-              <div
-                key={label}
-                className={cn(
-                  "rounded-xl border border-border/60 bg-muted/10 p-4",
-                  span === 2 && "sm:col-span-2"
-                )}
-              >
-                <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
-                {node ?? (
-                  <p
-                    className={cn(
-                      "font-medium",
-                      mono && "font-mono text-sm",
-                      highlight && "text-lg tabular-nums text-foreground"
-                    )}
-                  >
-                    {value || "—"}
-                  </p>
-                )}
-              </div>
-            ))}
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Display ID</p>
+              <p className="font-mono font-medium">{investmentDisplayId}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Plan name</p>
+              <p className="font-medium">{planName}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Amount</p>
+              <p className="font-medium text-lg tabular-nums">{formatINR(purchase.amount)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Status</p>
+              <StatusBadge status={purchase.status} />
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Initialized</p>
+              <p className="text-sm">{formatDate(purchase.initialized_at || purchase.created_at)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Payment proof uploaded</p>
+              <p className="text-sm">{formatDate(purchase.payment_proof_uploaded_at)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Payment verified</p>
+              <p className="text-sm">{formatDate(purchase.payment_verified_at)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Cheque number</p>
+              <p className="text-sm">{purchase.cheque_number ?? "—"}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/10 p-4 sm:col-span-2">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Partner</p>
+              <p className="text-sm">{purchase.partner_id != null ? `Partner #${purchase.partner_id}` : "—"}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* 2. Plan snapshot */}
-      <Card className="overflow-hidden border-border/60 shadow-md">
-        <CardHeader className="border-b border-border/60 bg-muted/20 py-5">
-          <CardTitle className="flex items-center gap-2.5 text-lg">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Calendar className="h-5 w-5" />
-            </div>
-            Plan snapshot (at time of investment)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-xl border border-border/60 bg-violet-50/80 dark:bg-violet-950/20 p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Plan name</p>
-              <p className="font-semibold">{investment.plan_snapshot?.plan_name || "—"}</p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-emerald-50/80 dark:bg-emerald-950/20 p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-medium text-muted-foreground">Monthly return</p>
+      {(planSnapshot || planDetails) && (
+        <Card className="overflow-hidden border-border/60 shadow-md">
+          <CardHeader className="border-b border-border/60 bg-muted/20 py-5">
+            <CardTitle className="flex items-center gap-2.5 text-lg">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Calendar className="h-5 w-5" />
               </div>
-              <p className="text-xl font-bold tabular-nums text-foreground">
-                {investment.plan_snapshot?.monthly_return_percent ?? "—"}%
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-emerald-50/80 dark:bg-emerald-950/20 p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-medium text-muted-foreground">Maturity return</p>
+              Plan snapshot (at time of investment)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-border/60 bg-violet-50/80 dark:bg-violet-950/20 p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Plan name</p>
+                <p className="font-semibold">{planSnapshot?.name ?? planName}</p>
               </div>
-              <p className="text-xl font-bold tabular-nums text-foreground">
-                {investment.plan_snapshot?.maturity_return_percent ?? "—"}%
-              </p>
+              {planSnapshot?.returns?.monthly_percent != null && (
+                <div className="rounded-xl border border-border/60 bg-emerald-50/80 dark:bg-emerald-950/20 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Percent className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground">Monthly return</p>
+                  </div>
+                  <p className="text-xl font-bold tabular-nums">{planSnapshot.returns.monthly_percent}%</p>
+                </div>
+              )}
+              {planDetails.duration_months != null && (
+                <div className="rounded-xl border border-border/60 bg-blue-50/80 dark:bg-blue-950/20 p-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Duration</p>
+                  <p className="font-semibold">{planDetails.duration_months} months</p>
+                </div>
+              )}
+              {planDetails.min_amount != null && (
+                <div className="rounded-xl border border-border/60 bg-blue-50/80 dark:bg-blue-950/20 p-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Min amount</p>
+                  <p className="font-semibold tabular-nums">{formatINR(planDetails.min_amount)}</p>
+                </div>
+              )}
             </div>
-            <div className="rounded-xl border border-border/60 bg-blue-50/80 dark:bg-blue-950/20 p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Duration</p>
-              <p className="font-semibold">
-                {investment.plan_snapshot?.duration_months ?? "—"} months
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-blue-50/80 dark:bg-blue-950/20 p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Min amount</p>
-              <p className="font-semibold tabular-nums">
-                {formatINR(investment.plan_snapshot?.min_amount)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-blue-50/80 dark:bg-blue-950/20 p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Tenure</p>
-              <p className="font-semibold">{investment.plan_snapshot?.tenure || "—"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 3. Bank account for this investment */}
       <Card className="overflow-hidden border-border/60 shadow-md">
@@ -282,33 +363,27 @@ const InvestmentDetailPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <p className="text-sm text-muted-foreground mb-4">
-            Payouts for this investment are credited to:
-          </p>
-          {investment.bank_for_investment ? (
+          <p className="text-sm text-muted-foreground mb-4">Payouts for this investment are credited to:</p>
+          {bankAccount ? (
             <div className="rounded-xl border border-border/60 bg-gradient-to-br from-emerald-50/80 to-background dark:from-emerald-950/20 dark:to-background p-5 shadow-sm max-w-xl">
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                   <Building2 className="h-4 w-4" />
                 </div>
-                <span className="font-semibold">{investment.bank_for_investment.bank_name || "—"}</span>
+                <span className="font-semibold">{bankAccount.bank_name || "—"}</span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Account number</p>
-                  <p className="font-mono font-semibold">
-                    {investment.bank_for_investment.account_number || "—"}
-                  </p>
+                  <p className="font-mono font-semibold">{bankAccount.account_number || "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">IFSC</p>
-                  <p className="font-mono font-semibold">
-                    {investment.bank_for_investment.ifsc || "—"}
-                  </p>
+                  <p className="font-mono font-semibold">{bankAccount.ifsc || "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Branch</p>
-                  <p className="font-semibold">{investment.bank_for_investment.branch || "—"}</p>
+                  <p className="font-semibold">{bankAccount.bank_branch ?? bankAccount.branch ?? "—"}</p>
                 </div>
               </div>
             </div>
@@ -331,11 +406,11 @@ const InvestmentDetailPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          {investment.nominees?.length > 0 ? (
+          {nominees.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              {investment.nominees.map((n, idx) => (
+              {nominees.map((n) => (
                 <div
-                  key={idx}
+                  key={n.id || n.name}
                   className="flex items-center gap-4 rounded-xl border border-border/60 bg-muted/10 p-5 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <Avatar className="h-12 w-12 rounded-xl border-2 border-primary/10 bg-primary/10 text-base font-semibold text-primary">
@@ -344,14 +419,31 @@ const InvestmentDetailPage = () => {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-foreground">{n.name || "—"}</p>
                     <p className="text-sm text-muted-foreground">
-                      {n.relationship || "—"} · Share {n.share_percent ?? "—"}%
+                      {n.relation ?? n.relationship ?? "—"}
+                      {(n.share_percentage != null || n.share_percent != null) && (
+                        <> · Share {n.share_percentage ?? n.share_percent}%</>
+                      )}
                     </p>
-                    {n.contact && (
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Phone className="h-3.5 w-3.5" />
-                        {n.contact}
+                    {n.nominee_dob && (
+                      <p className="mt-1 text-sm text-muted-foreground">DOB: {formatDate(n.nominee_dob)}</p>
+                    )}
+                    {(n.nominee_address_ocr || n.nominee_address) && (
+                      <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                        {n.nominee_address_ocr || n.nominee_address}
                       </p>
                     )}
+                    {n.guardian_name && (
+                      <p className="mt-1 text-sm text-muted-foreground">Guardian: {n.guardian_name}</p>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-2"
+                      onClick={() => setNomineeModalNominee(n)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View documents
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -364,6 +456,13 @@ const InvestmentDetailPage = () => {
         </CardContent>
       </Card>
 
+      <NomineeDocumentsModal
+        isOpen={!!nomineeModalNominee}
+        onClose={() => setNomineeModalNominee(null)}
+        nominee={nomineeModalNominee}
+        investorId={purchase?.investor_id ?? investorId}
+      />
+
       {/* 5. Installments */}
       <Card className="overflow-hidden border-border/60 shadow-md">
         <CardHeader className="border-b border-border/60 bg-muted/20 py-5">
@@ -375,7 +474,7 @@ const InvestmentDetailPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          {investment.installments?.length > 0 ? (
+          {installments.length > 0 ? (
             <>
               <div className="overflow-x-auto rounded-xl border border-border/60">
                 <Table>
@@ -393,7 +492,7 @@ const InvestmentDetailPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {investment.installments.map((row, idx) => (
+                    {installments.map((row, idx) => (
                       <TableRow
                         key={row.seq}
                         className={cn(
@@ -422,35 +521,33 @@ const InvestmentDetailPage = () => {
                   </TableBody>
                 </Table>
               </div>
-              {investment.installment_summary && (
+              {summary && (
                 <div className="mt-5 flex flex-wrap items-center gap-6 rounded-xl border border-border/60 bg-primary/5 px-5 py-4">
                   <span className="font-semibold tabular-nums">
-                    Total gross: {formatINR(investment.installment_summary.total_gross)}
+                    Total gross: {formatINR(summary.total_gross)}
                   </span>
                   <span className="text-muted-foreground text-sm tabular-nums">
-                    Total TDS: {formatINR(investment.installment_summary.total_tds)}
+                    Total TDS: {formatINR(summary.total_tds)}
                   </span>
                   <span className="font-semibold tabular-nums text-foreground">
-                    Total receivable: {formatINR(investment.installment_summary.total_receivable)}
+                    Total receivable: {formatINR(summary.total_receivable)}
                   </span>
                   <span className="ml-auto rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                    Pending: {investment.installment_summary.pending_count} · Paid:{" "}
-                    {investment.installment_summary.paid_count}
-                    {investment.installment_summary.cancelled_count > 0 &&
-                      ` · Cancelled: ${investment.installment_summary.cancelled_count}`}
+                    Pending: {summary.pending_count ?? 0} · Paid: {summary.paid_count ?? 0}
+                    {(summary.cancelled_count ?? 0) > 0 && ` · Cancelled: ${summary.cancelled_count}`}
                   </span>
                 </div>
               )}
             </>
           ) : (
             <div className="rounded-xl border border-dashed border-border/60 py-10 text-center text-muted-foreground">
-              No installments yet. Generated after deed is signed.
+              No installments yet. Schedule generated after deed is signed.
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* 6 & 7. Deed + Payment proof (side by side) */}
+      {/* 6 & 7. Deed + Payment proof */}
       <div className="grid gap-6 sm:grid-cols-2">
         <Card className="overflow-hidden border-border/60 shadow-md">
           <CardHeader className="border-b border-border/60 bg-muted/20 py-5">
@@ -462,10 +559,16 @@ const InvestmentDetailPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {investment.deed_signed ? (
-              <Button variant="outline" size="default" className="gap-2 shadow-sm">
+            {purchase.signed_deed_url || purchase.leegality_signing_status === "signed" ? (
+              <Button
+                variant="outline"
+                size="default"
+                className="gap-2 shadow-sm"
+                disabled={deedLoading}
+                onClick={handleViewDeed}
+              >
                 <Eye className="h-4 w-4" />
-                View deed
+                {deedLoading ? "Loading…" : "View deed"}
               </Button>
             ) : (
               <div className="rounded-xl border border-dashed border-border/60 py-8 text-center text-sm text-muted-foreground">
@@ -484,8 +587,13 @@ const InvestmentDetailPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {investment.payment_proof_uploaded ? (
-              <Button variant="outline" size="default" className="gap-2 shadow-sm">
+            {purchase.payment_proof_file_path || purchase.payment_proof_file_paths?.length > 0 ? (
+              <Button
+                variant="outline"
+                size="default"
+                className="gap-2 shadow-sm"
+                onClick={() => setPaymentProofModalOpen(true)}
+              >
                 <Eye className="h-4 w-4" />
                 View payment proof
               </Button>
@@ -498,46 +606,43 @@ const InvestmentDetailPage = () => {
         </Card>
       </div>
 
+      <PaymentProofModal
+        isOpen={paymentProofModalOpen}
+        onClose={() => setPaymentProofModalOpen(false)}
+        purchase={purchase}
+      />
+
       {/* 8. Timeline */}
-      <Card className="overflow-hidden border-border/60 shadow-md">
-        <CardHeader className="border-b border-border/60 bg-muted/20 py-5">
-          <CardTitle className="flex items-center gap-2.5 text-lg">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Clock className="h-5 w-5" />
-            </div>
-            Timeline
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {investment.timeline?.length > 0 ? (
+      {timeline.length > 0 && (
+        <Card className="overflow-hidden border-border/60 shadow-md">
+          <CardHeader className="border-b border-border/60 bg-muted/20 py-5">
+            <CardTitle className="flex items-center gap-2.5 text-lg">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Clock className="h-5 w-5" />
+              </div>
+              Timeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
             <div className="relative pl-2">
               <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
               <ul className="space-y-0">
-                {investment.timeline.map((item, idx) => (
+                {timeline.map((item, idx) => (
                   <li key={idx} className="relative flex gap-5 pb-8 last:pb-0">
                     <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground text-xs font-semibold shadow">
                       {idx + 1}
                     </div>
                     <div className="min-w-0 flex-1 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
                       <p className="font-medium text-foreground">{item.label}</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {item.date}
-                        {item.time && (
-                          <span className="ml-2 font-medium text-foreground/80">{item.time}</span>
-                        )}
-                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{formatDate(item.date)}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border/60 py-10 text-center text-muted-foreground">
-              No timeline events.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

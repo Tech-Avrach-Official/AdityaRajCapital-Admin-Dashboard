@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import DocumentPreviewModal from "@/components/common/DocumentPreviewModal"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 
@@ -105,6 +106,49 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
   const fileType = payment_proof_file_type || "unknown"
   const isImage = fileType === "image"
   const isPdf = fileType === "pdf"
+
+  const paymentProofSubtitle = (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <span className="text-muted-foreground">Investor:</span>
+        <p className="font-medium">{investor_name || investor_id}</p>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Plan:</span>
+        <p className="font-medium">{plan_name}</p>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Amount:</span>
+        <p className="font-semibold text-green-600">{formatINR(amount)}</p>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Uploaded:</span>
+        <p className="font-medium">
+          {payment_proof_uploaded_at
+            ? format(new Date(payment_proof_uploaded_at), "MMM dd, yyyy HH:mm")
+            : "-"}
+        </p>
+      </div>
+    </div>
+  )
+
+  if (hasMultiple) {
+    return (
+      <DocumentPreviewModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Payment Proof - ${id}`}
+        documents={proofUrls.map((url, i) => ({
+          label: `Payment proof ${i + 1} of ${proofUrls.length}`,
+          url: typeof url === "string" ? url : url?.url,
+        }))}
+        loading={loadingUrl}
+        error={urlError}
+        emptyMessage="No payment proof available."
+        subtitle={paymentProofSubtitle}
+      />
+    )
+  }
 
   const handleZoomIn = () => {
     setZoom((prev) => Math.min(prev + 0.25, 3))
@@ -276,42 +320,53 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
           </div>
         </div>
 
-        {/* Content container */}
-        <div className="flex-1 min-h-0 overflow-auto bg-gray-900/95 flex items-center justify-center p-4">
+        {/* Content container - scrollable for multiple images, centered for single/empty/loading */}
+        <div
+          className={cn(
+            "flex-1 min-h-0 overflow-auto bg-gray-900/95 p-4",
+            (!proofUrls.length || !hasMultiple) && "flex items-center justify-center"
+          )}
+        >
           {loadingUrl ? (
-            <div className="text-center text-gray-400">
-              <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin" />
-              <p>Loading payment proof...</p>
+            <div className="flex items-center justify-center min-h-[200px] text-center text-gray-400">
+              <div>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin" />
+                <p>Loading payment proof...</p>
+              </div>
             </div>
           ) : urlError ? (
-            <div className="text-center text-gray-400">
-              <FileText className="w-16 h-16 mx-auto mb-4" />
-              <p className="text-lg font-medium">Could not load payment proof</p>
-              <p className="text-sm mt-2 text-red-400">{urlError}</p>
+            <div className="flex items-center justify-center min-h-[200px] text-center text-gray-400">
+              <div>
+                <FileText className="w-16 h-16 mx-auto mb-4" />
+                <p className="text-lg font-medium">Could not load payment proof</p>
+                <p className="text-sm mt-2 text-red-400">{urlError}</p>
+              </div>
             </div>
           ) : proofUrls.length > 0 ? (
             <>
               {hasMultiple ? (
-                <div className="w-full max-w-5xl py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="w-full max-w-4xl mx-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-4">
                     {proofUrls.map((url, index) => (
                       <div
                         key={index}
-                        className="flex flex-col items-center gap-2 rounded-lg overflow-hidden bg-black/30 border border-white/10 p-2"
+                        className="flex flex-col items-center gap-3 rounded-xl overflow-hidden bg-black/30 border border-white/10 p-4"
                       >
-                        <div className="w-full flex justify-center bg-black/20 rounded min-h-[120px]">
+                        <div className="w-full flex justify-center bg-black/20 rounded-lg min-h-[160px] overflow-hidden">
                           <img
-                            src={url}
+                            src={typeof url === "string" ? url : url?.url}
                             alt={`Payment proof ${index + 1}`}
-                            className="max-h-[50vh] max-w-full w-auto object-contain"
+                            className="max-h-[45vh] max-w-full w-auto object-contain"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">Payment proof {index + 1} of {proofUrls.length}</p>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Payment proof {index + 1} of {proofUrls.length}
+                        </p>
                         <div className="flex gap-2 flex-wrap justify-center">
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => handleOpenInNewTab(url)}
+                            onClick={() => handleOpenInNewTab(typeof url === "string" ? url : url?.url)}
                           >
                             <ExternalLink className="w-3 h-3 mr-1" />
                             Open
@@ -319,7 +374,7 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => handleDownload(url, index)}
+                            onClick={() => handleDownload(typeof url === "string" ? url : url?.url, index)}
                           >
                             <Download className="w-3 h-3 mr-1" />
                             Download

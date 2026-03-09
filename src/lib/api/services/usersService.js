@@ -602,19 +602,48 @@ export const usersService = {
       }
     }
 
-    const response = await apiClient.get(endpoints.users.investors, { params })
+    const paramsToSend = {}
+    if (params.branch_id != null && params.branch_id !== "" && params.branch_id !== "all") {
+      paramsToSend.branch_id = params.branch_id
+    }
+    const response = await apiClient.get(endpoints.users.investors, { params: paramsToSend })
     const resData = response.data?.data ?? response.data
     const investors = resData?.investors ?? resData ?? []
     const total = resData?.count ?? resData?.total ?? investors.length
+    const ps = (inv) => inv.purchase_summary ?? {}
 
-    // Normalize API fields to UI format (client_id → investorId, partner → partnerName, kyc_complete → kycStatus)
+    // Normalize API fields to UI format (per INVESTOR_MODULE_FRONTEND_GUIDE)
+    // Referral: partner name or RM name (mutually exclusive); branch from partner's RM or investor's direct RM
     const normalizedData = Array.isArray(investors)
-      ? investors.map((inv) => ({
-          ...inv,
-          investorId: inv.client_id ?? inv.investorId,
-          partnerName: inv.partner?.partner_name ?? inv.partnerName ?? null,
-          kycStatus: inv.kyc_complete === 1 ? "verified" : inv.kyc_complete === 0 ? "pending" : inv.kycStatus ?? "pending",
-        }))
+      ? investors.map((inv) => {
+          const kycStatus = inv.kyc_complete === 1 ? "complete" : "pending"
+          const partnerName = inv.partner?.name ?? inv.partner?.partner_name ?? null
+          const rmName = inv.rm?.name ?? inv.rm?.rm_code ?? null
+          const referral = partnerName
+            ? `${partnerName}${inv.partner?.partner_referral_code ? ` (${inv.partner.partner_referral_code})` : ""}`
+            : (rmName || "Direct")
+          const referral_type = partnerName ? "partner" : (rmName ? "rm" : null)
+          const branch_name = inv.branch?.name ?? null
+          const invSummary = inv.investment ?? inv.purchase_summary ?? {}
+          return {
+            ...inv,
+            investorId: inv.client_id ?? inv.investorId,
+            partnerName: partnerName ?? null,
+            referral,
+            referral_type,
+            branch_name,
+            kycStatus,
+            kyc_status: kycStatus,
+            total_invested:
+              ps(inv).total_invested_amount ??
+              invSummary.total_invested_amount ??
+              invSummary.total_investment_amount ??
+              inv.total_invested,
+            verified_count: ps(inv).total_verified_count ?? invSummary.total_verified_count ?? inv.verified_count,
+            last_verified: ps(inv).last_verified_at ?? invSummary.last_verified_at ?? inv.last_verified_at,
+            created: inv.created_at ?? inv.created,
+          }
+        })
       : []
 
     return {
@@ -628,8 +657,91 @@ export const usersService = {
       await delay(300)
       return mockInvestors.find((i) => i.id === id) || null
     }
+    if (id == null || id === "") return null
+    try {
+      const response = await apiClient.get(endpoints.admin.getInvestor(id))
+      const data = response.data?.data ?? response.data
+      if (!data) return null
+      const ps = data.purchase_summary ?? {}
+      const partnerName = data.partner?.name ?? data.partner?.partner_name ?? null
+      const rmName = data.rm?.name ?? data.rm?.rm_code ?? null
+      const referral = partnerName
+        ? `${partnerName}${data.partner?.partner_referral_code ? ` (${data.partner.partner_referral_code})` : ""}`
+        : (rmName || "Direct")
+      return {
+        ...data,
+        referral,
+        kyc_status: data.kyc_complete === 1 ? "complete" : "pending",
+        nominees_added: data.has_nominees === 1,
+        joined: data.created_at,
+      }
+    } catch {
+      return null
+    }
+  },
 
-    const response = await apiClient.get(endpoints.users.investor(id))
-    return response.data?.data || null
+  async getInvestorKycData(investorId) {
+    const response = await apiClient.get(endpoints.admin.investorKycData(investorId))
+    const data = response.data?.data ?? response.data
+    return data ?? { investor_id: investorId, kyc: null, documents: [] }
+  },
+
+  async getInvestorKycDocuments(investorId) {
+    const response = await apiClient.get(endpoints.admin.investorKycDocuments(investorId))
+    const data = response.data?.data ?? response.data
+    return data?.documents ?? []
+  },
+
+  async getInvestorBankAccounts(investorId) {
+    const response = await apiClient.get(endpoints.admin.investorBankAccounts(investorId))
+    const data = response.data?.data ?? response.data
+    const list = data?.bank_accounts ?? data ?? []
+    return Array.isArray(list) ? list : []
+  },
+
+  /**
+   * Fetch signed URLs for a nominee's documents (Aadhaar front/back etc.).
+   * Same concept as payment-proof-url: API returns signed URLs for viewing.
+   * GET /api/admin/investors/:investorId/nominees/:nomineeId/documents
+   */
+  async getNomineeDocumentUrls(investorId, nomineeId) {
+    const response = await apiClient.get(
+      endpoints.admin.nomineeDocuments(investorId, nomineeId)
+    )
+    const data = response.data?.data ?? response.data
+    const documents = data?.documents ?? data ?? []
+    return Array.isArray(documents) ? documents : []
+  },
+
+  async getInvestorNominees(investorId) {
+    const response = await apiClient.get(endpoints.admin.investorNominees(investorId))
+    const data = response.data?.data ?? response.data
+    const list = data?.nominees ?? data ?? []
+    if (!Array.isArray(list)) return []
+    // Normalize API fields (nominee_name, nominee_relation, etc.) for UI and keep raw fields for documents modal
+    return list.map((n) => ({
+      ...n,
+      name: n.nominee_name ?? n.name,
+      relation: n.nominee_relation ?? n.relation ?? n.relationship,
+      share_percentage: n.share_percentage ?? n.share_percent,
+      guardian_name: n.guardian_name,
+      // Keep path fields for NomineeDocumentsModal
+      nominee_aadhar_front_path: n.nominee_aadhar_front_path,
+      nominee_aadhar_back_path: n.nominee_aadhar_back_path,
+      nominee_dob: n.nominee_dob,
+      nominee_address_ocr: n.nominee_address_ocr ?? n.nominee_address,
+    }))
+  },
+
+  async getInvestorPurchases(investorId, params = {}) {
+    const response = await apiClient.get(endpoints.admin.investorPurchases(investorId), { params })
+    const data = response.data?.data ?? response.data
+    const purchases = data?.purchases ?? data ?? []
+    const total = data?.total ?? (Array.isArray(purchases) ? purchases.length : 0)
+    return {
+      purchases: Array.isArray(purchases) ? purchases : [],
+      total: Number(total) || 0,
+      investor: data?.investor ?? null,
+    }
   },
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   useReactTable,
@@ -6,9 +6,11 @@ import {
   getSortedRowModel,
   flexRender,
 } from "@tanstack/react-table"
+import { toast } from "react-hot-toast"
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, Search } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -27,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { mockInvestorsList, mockBranches } from "@/lib/mockData/investors"
+import { usersService, hierarchyService } from "@/lib/api/services"
 import { cn } from "@/lib/utils"
 
 const formatINR = (amount) => {
@@ -43,22 +45,39 @@ const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { dateSty
 
 const InvestorsPage = () => {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+  const [investors, setInvestors] = useState([])
+  const [branches, setBranches] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
   const [kycFilter, setKycFilter] = useState("all")
   const [branchFilter, setBranchFilter] = useState("all")
   const [exporting, setExporting] = useState(false)
   const [sorting, setSorting] = useState([])
 
-  const branches = useMemo(() => mockBranches(), [])
+  useEffect(() => {
+    hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? [])).catch(() => setBranches([]))
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    const branchId = branchFilter && branchFilter !== "all" ? branchFilter : undefined
+    usersService
+      .getInvestors({ branch_id: branchId })
+      .then((res) => setInvestors(res?.data ?? []))
+      .catch(() => {
+        toast.error("Failed to load investors")
+        setInvestors([])
+      })
+      .finally(() => setLoading(false))
+  }, [branchFilter])
 
   const filteredInvestors = useMemo(() => {
-    let list = [...mockInvestorsList]
+    let list = [...investors]
     const q = searchValue.trim().toLowerCase()
     if (q) {
       list = list.filter(
         (i) =>
-          (i.client_id && i.client_id.toLowerCase().includes(q)) ||
+          (i.client_id && String(i.client_id).toLowerCase().includes(q)) ||
           (i.name && i.name.toLowerCase().includes(q)) ||
           (i.email && i.email.toLowerCase().includes(q))
       )
@@ -66,11 +85,8 @@ const InvestorsPage = () => {
     if (kycFilter !== "all") {
       list = list.filter((i) => (i.kyc_status || "").toLowerCase() === kycFilter.toLowerCase())
     }
-    if (branchFilter !== "all") {
-      list = list.filter((i) => String(i.branch_id) === String(branchFilter))
-    }
     return list
-  }, [searchValue, kycFilter, branchFilter])
+  }, [investors, searchValue, kycFilter])
 
   const handleExport = () => {
     setExporting(true)
@@ -78,8 +94,7 @@ const InvestorsPage = () => {
       const headers = [
         "Client ID",
         "Name",
-        "Email",
-        "Mobile",
+        "Branch",
         "Referral",
         "KYC",
         "Total Invested",
@@ -91,8 +106,7 @@ const InvestorsPage = () => {
         [
           i.client_id,
           i.name,
-          i.email,
-          i.mobile,
+          i.branch_name ?? "",
           i.referral,
           i.kyc_status,
           i.total_invested ?? "",
@@ -157,32 +171,44 @@ const InvestorsPage = () => {
           <button
             type="button"
             className="text-left font-medium text-primary hover:underline"
-            onClick={() => navigate(`/admin/users/investors/${row.original.id}`)}
+            onClick={() =>
+              navigate(`/admin/users/investors/${row.original.id}`, {
+                state: { investor: row.original },
+              })
+            }
           >
             {row.original.name || "—"}
           </button>
         ),
       },
       {
-        accessorKey: "email",
-        header: "Email",
+        accessorKey: "branch_name",
+        header: "Branch",
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.original.email || "—"}</span>
-        ),
-      },
-      {
-        accessorKey: "mobile",
-        header: "Mobile",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.original.mobile || "—"}</span>
+          <span className="text-sm text-muted-foreground">{row.original.branch_name || "—"}</span>
         ),
       },
       {
         accessorKey: "referral",
         header: "Referral",
-        cell: ({ row }) => (
-          <span className="text-sm">{row.original.referral || "Direct"}</span>
-        ),
+        cell: ({ row }) => {
+          const { referral, referral_type } = row.original
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              {referral_type === "partner" && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium">
+                  Partner
+                </Badge>
+              )}
+              {referral_type === "rm" && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium">
+                  RM
+                </Badge>
+              )}
+              <span className="text-sm">{referral || "Direct"}</span>
+            </div>
+          )
+        },
       },
       {
         accessorKey: "kyc_status",
@@ -274,7 +300,11 @@ const InvestorsPage = () => {
             variant="outline"
             size="sm"
             className="gap-2"
-            onClick={() => navigate(`/admin/users/investors/${row.original.id}`)}
+            onClick={() =>
+              navigate(`/admin/users/investors/${row.original.id}`, {
+                state: { investor: row.original },
+              })
+            }
           >
             <Eye className="h-4 w-4" />
             View
@@ -399,7 +429,9 @@ const InvestorsPage = () => {
                     )}
                     onClick={(e) => {
                       if (!e.target.closest("button")) {
-                        navigate(`/admin/users/investors/${row.original.id}`)
+                        navigate(`/admin/users/investors/${row.original.id}`, {
+                          state: { investor: row.original },
+                        })
                       }
                     }}
                   >

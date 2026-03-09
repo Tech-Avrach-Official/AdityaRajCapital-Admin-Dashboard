@@ -104,6 +104,36 @@ export const purchasesService = {
   },
 
   // =====================
+  // Get single purchase (full detail) - for Investment detail page
+  // =====================
+
+  async getPurchase(purchaseId) {
+    const response = await apiClient.get(endpoints.purchases.get(purchaseId))
+    const data = response.data?.data ?? response.data
+    return data ?? null
+  },
+
+  // =====================
+  // Get Signed Deed URL - for "View deed" on Investor/Investment detail
+  // =====================
+
+  async getSignedDeedUrl(purchaseId) {
+    const response = await apiClient.get(endpoints.purchases.signedDeedUrl(purchaseId))
+    const data = response.data?.data ?? response.data
+    return data?.url ?? data?.signed_deed_url ?? null
+  },
+
+  // =====================
+  // Get Purchase Installments - for Investment detail page
+  // =====================
+
+  async getInstallments(purchaseId) {
+    const response = await apiClient.get(endpoints.purchases.installments(purchaseId))
+    const data = response.data?.data ?? response.data
+    return data ?? { installments: [], summary: null }
+  },
+
+  // =====================
   // Get Payment Proof URL(s) - signed URLs (API returns data.urls array)
   // =====================
 
