@@ -13,6 +13,8 @@ const statusConfig = {
   processed: { variant: "success", label: "Processed" },
   failed: { variant: "destructive", label: "Failed" },
   paid: { variant: "success", label: "Paid" },
+  due: { variant: "warning", label: "Due" },
+  overdue: { variant: "destructive", label: "Overdue" },
 }
 
 const StatusBadge = ({ status, className, customLabel }) => {

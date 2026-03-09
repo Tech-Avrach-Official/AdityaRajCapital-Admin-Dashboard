@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react"
-import { useMemo } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
@@ -19,12 +18,24 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { kycService } from "@/lib/api/services"
+import KYCDocumentViewModal from "./components/KYCDocumentViewModal"
+
+const ROLE_OPTIONS = [
+  { value: "all", label: "All roles" },
+  { value: "investor", label: "Investor" },
+  { value: "partner", label: "Partner" },
+]
 
 const KYCPage = () => {
   const [kycList, setKycList] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
   const [activeTab, setActiveTab] = useState("pending")
+  const [roleFilter, setRoleFilter] = useState("all")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [documentModalOpen, setDocumentModalOpen] = useState(false)
+  const [selectedRow, setSelectedRow] = useState(null)
   const [stats, setStats] = useState({
     pending: 0,
     verified: 0,
@@ -34,7 +45,7 @@ const KYCPage = () => {
 
   useEffect(() => {
     loadKYC()
-  }, [searchValue, activeTab])
+  }, [searchValue, activeTab, roleFilter, dateFrom, dateTo])
 
   const loadKYC = async () => {
     setLoading(true)
@@ -43,10 +54,13 @@ const KYCPage = () => {
       const response = await kycService.getKYCList({
         search: searchValue,
         status,
+        role: roleFilter,
+        type: roleFilter,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
       })
       setKycList(response.data)
 
-      // Calculate stats
       const pending = response.data.filter((k) => k.status === "pending").length
       const verified = response.data.filter((k) => k.status === "verified").length
       const rejected = response.data.filter((k) => k.status === "rejected").length
@@ -64,24 +78,27 @@ const KYCPage = () => {
     }
   }
 
-  const handleVerify = async (id) => {
-    try {
-      await kycService.verifyKYC(id)
-      toast.success("KYC verified successfully")
-      loadKYC()
-    } catch (error) {
-      toast.error("Failed to verify KYC")
-    }
+  const handleViewDocuments = (row) => {
+    setSelectedRow(row)
+    setDocumentModalOpen(true)
   }
 
-  const handleReject = async (id, reason) => {
-    try {
-      await kycService.rejectKYC(id, reason)
-      toast.success("KYC rejected")
-      loadKYC()
-    } catch (error) {
-      toast.error("Failed to reject KYC")
-    }
+  const handleCloseDocumentModal = () => {
+    setDocumentModalOpen(false)
+    setSelectedRow(null)
+  }
+
+  const onFilterChange = (key, value) => {
+    if (key === "role") setRoleFilter(value)
+    if (key === "dateFrom") setDateFrom(value)
+    if (key === "dateTo") setDateTo(value)
+  }
+
+  const onClearFilters = () => {
+    setSearchValue("")
+    setRoleFilter("all")
+    setDateFrom("")
+    setDateTo("")
   }
 
   const columns = useMemo(
@@ -90,7 +107,11 @@ const KYCPage = () => {
         accessorKey: "userName",
         header: "User Name",
         cell: ({ row }) => (
-          <button className="text-primary hover:underline font-medium">
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline"
+            onClick={() => handleViewDocuments(row.original)}
+          >
             {row.original.userName}
           </button>
         ),
@@ -99,7 +120,7 @@ const KYCPage = () => {
         accessorKey: "role",
         header: "Role",
         cell: ({ row }) => (
-          <span className="capitalize px-2 py-1 bg-muted rounded text-sm">
+          <span className="capitalize rounded bg-muted px-2 py-1 text-sm">
             {row.original.role}
           </span>
         ),
@@ -108,17 +129,15 @@ const KYCPage = () => {
       {
         accessorKey: "submittedDate",
         header: "Submitted Date",
-        cell: ({ row }) => format(new Date(row.original.submittedDate), "MMM dd, yyyy"),
+        cell: ({ row }) =>
+          row.original.submittedDate
+            ? format(new Date(row.original.submittedDate), "MMM dd, yyyy")
+            : "—",
       },
       {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
-      },
-      {
-        accessorKey: "documents",
-        header: "Documents",
-        cell: () => <span className="text-sm">5 documents</span>,
       },
       {
         id: "actions",
@@ -128,32 +147,12 @@ const KYCPage = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => toast.info("KYC Review Modal - To be implemented")}
+              onClick={() => handleViewDocuments(row.original)}
+              title="View KYC documents"
             >
               <Eye className="h-4 w-4" />
+              View documents
             </Button>
-            {row.original.status === "pending" && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleVerify(row.original.id)}
-                  className="text-success"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    handleReject(row.original.id, "Rejected by admin")
-                  }
-                  className="text-destructive"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </>
-            )}
           </div>
         ),
       },
@@ -172,7 +171,7 @@ const KYCPage = () => {
       <PageHeader title="KYC Verification" />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Pending" value={stats.pending} icon={Eye} iconColor="orange" />
         <MetricCard
           title="Verified"
@@ -196,12 +195,43 @@ const KYCPage = () => {
           <FilterBar
             searchValue={searchValue}
             onSearchChange={setSearchValue}
-            searchPlaceholder="Search by name, email..."
-            onClearFilters={() => setSearchValue("")}
+            searchPlaceholder="Search by name, email, mobile..."
+            filters={[
+              {
+                key: "role",
+                value: roleFilter,
+                placeholder: "Role",
+                options: ROLE_OPTIONS,
+              },
+            ]}
+            onFilterChange={onFilterChange}
+            onClearFilters={onClearFilters}
           />
 
+          {/* Date range filters */}
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-white p-4">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">From:</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded border border-input bg-background px-3 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">To:</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded border border-input bg-background px-3 py-1.5 text-sm"
+              />
+            </label>
+          </div>
+
           {loading ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="py-8 text-center">Loading...</div>
           ) : (
             <div className="rounded-md border">
               <Table>
@@ -212,7 +242,10 @@ const KYCPage = () => {
                         <TableHead key={header.id}>
                           {header.isPlaceholder
                             ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -224,7 +257,10 @@ const KYCPage = () => {
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -242,6 +278,12 @@ const KYCPage = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <KYCDocumentViewModal
+        open={documentModalOpen}
+        onClose={handleCloseDocumentModal}
+        row={selectedRow}
+      />
     </div>
   )
 }

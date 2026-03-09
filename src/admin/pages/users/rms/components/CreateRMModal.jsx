@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select"
 import { useRMs } from "@/hooks"
 import { hierarchyService } from "@/lib/api/services"
+import { compressImageForUpload } from "@/lib/utils/imageCompression"
 
 // Validation schema for RM creation
 const rmSchema = z.object({
@@ -166,19 +167,17 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     aadhaarFront: "",
     panImage: "",
   })
-  // Hierarchy for branch selection
-  const [nations, setNations] = useState([])
-  const [states, setStates] = useState([])
+  // Single Branch selection (guide: only Branch is selected; hierarchy is automatic)
   const [branches, setBranches] = useState([])
-  const [selectedNationId, setSelectedNationId] = useState("")
-  const [selectedStateId, setSelectedStateId] = useState("")
   const [selectedBranchId, setSelectedBranchId] = useState("")
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  // OTP inputs
+  // OTP inputs (refs keep latest value for verify click to avoid stale state)
   const [mobileOtp, setMobileOtp] = useState("")
   const [emailOtp, setEmailOtp] = useState("")
+  const mobileOtpRef = useRef("")
+  const emailOtpRef = useRef("")
 
   // Resend cooldown timers
   const [mobileResendTimer, setMobileResendTimer] = useState(0)
@@ -190,7 +189,6 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     otpLoading,
     otpError,
     otpVerification,
-    devOtps,
     initiateSignup,
     verifyMobile,
     verifyEmail,
@@ -218,61 +216,21 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     },
   })
 
-  // Load hierarchy when modal opens
+  // Load all branches when modal opens (single Branch selector per guide)
   useEffect(() => {
     if (!open) return
     let cancelled = false
     setHierarchyLoading(true)
     hierarchyService
-      .getNations()
-      .then(({ nations: list }) => {
-        if (!cancelled) setNations(list ?? [])
+      .getBranches()
+      .then(({ branches: list }) => {
+        if (!cancelled) setBranches(list ?? [])
       })
       .finally(() => {
         if (!cancelled) setHierarchyLoading(false)
       })
     return () => { cancelled = true }
   }, [open])
-
-  useEffect(() => {
-    if (!selectedNationId) {
-      setStates([])
-      setBranches([])
-      setSelectedStateId("")
-      setSelectedBranchId("")
-      return
-    }
-    let cancelled = false
-    hierarchyService
-      .getStates({ nation_id: Number(selectedNationId) })
-      .then(({ states: list }) => {
-        if (!cancelled) {
-          setStates(list ?? [])
-          setSelectedStateId("")
-          setSelectedBranchId("")
-          setBranches([])
-        }
-      })
-    return () => { cancelled = true }
-  }, [selectedNationId])
-
-  useEffect(() => {
-    if (!selectedStateId) {
-      setBranches([])
-      setSelectedBranchId("")
-      return
-    }
-    let cancelled = false
-    hierarchyService
-      .getBranches({ state_id: Number(selectedStateId) })
-      .then(({ branches: list }) => {
-        if (!cancelled) {
-          setBranches(list ?? [])
-          setSelectedBranchId("")
-        }
-      })
-    return () => { cancelled = true }
-  }, [selectedStateId])
 
   const steps = [
     { id: 1, name: "Details" },
@@ -309,15 +267,13 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     setAadhaarFrontFile(null)
     setPanImageFile(null)
     setFileErrors({ aadhaarFront: "", panImage: "" })
-    setSelectedNationId("")
-    setSelectedStateId("")
     setSelectedBranchId("")
-    setNations([])
-    setStates([])
     setBranches([])
     setShowPassword(false)
     setMobileOtp("")
     setEmailOtp("")
+    mobileOtpRef.current = ""
+    emailOtpRef.current = ""
     setMobileResendTimer(0)
     setEmailResendTimer(0)
     resetOtpSignup()
@@ -362,8 +318,19 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
       return
     }
 
-    const branchName = branches.find((b) => b.id === branchId)?.name ?? "Branch"
+    const selectedBranch = branches.find((b) => b.id === branchId)
+    const branchName = selectedBranch
+      ? [selectedBranch.name, selectedBranch.state_name, selectedBranch.nation_name]
+          .filter(Boolean)
+          .join(" · ") || selectedBranch.name
+      : "Branch"
     setFormData({ ...data, branch_id: branchId, branch_name: branchName })
+
+    // Compress images to avoid 413 Request Entity Too Large (server body size limit)
+    const [compressedAadhaar, compressedPan] = await Promise.all([
+      compressImageForUpload(aadhaarFrontFile),
+      compressImageForUpload(panImageFile),
+    ])
 
     const formDataObj = new FormData()
     formDataObj.append("name", data.name.trim())
@@ -371,8 +338,8 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     formDataObj.append("phone_number", data.phone_number.trim())
     formDataObj.append("password", data.password)
     formDataObj.append("branch_id", branchId)
-    formDataObj.append("rm_aadhaar_front", aadhaarFrontFile)
-    formDataObj.append("rm_pan_image", panImageFile)
+    formDataObj.append("rm_aadhaar_front", compressedAadhaar)
+    formDataObj.append("rm_pan_image", compressedPan)
 
     const result = await initiateSignup(formDataObj)
 
@@ -385,35 +352,39 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
     }
   }
 
-  // Step 2: Verify mobile OTP
+  // Step 2: Verify mobile OTP (use ref so we always have latest value on click)
   const handleVerifyMobile = async () => {
-    if (mobileOtp.length !== 6) {
+    const otp = mobileOtpRef.current
+    if (!otp || otp.length !== 6) {
       toast.error("Please enter a 6-digit OTP")
       return
     }
 
-    const result = await verifyMobile(mobileOtp)
+    const result = await verifyMobile(otp)
 
     if (result.meta?.requestStatus === "fulfilled") {
       toast.success("Mobile verified successfully")
       setMobileOtp("")
+      mobileOtpRef.current = ""
     } else {
       toast.error(result.payload || "Invalid OTP")
     }
   }
 
-  // Step 3: Verify email OTP
+  // Step 3: Verify email OTP (use ref so we always have latest value on click)
   const handleVerifyEmail = async () => {
-    if (emailOtp.length !== 6) {
+    const otp = emailOtpRef.current
+    if (!otp || otp.length !== 6) {
       toast.error("Please enter a 6-digit OTP")
       return
     }
 
-    const result = await verifyEmail(emailOtp)
+    const result = await verifyEmail(otp)
 
     if (result.meta?.requestStatus === "fulfilled") {
       toast.success("Email verified successfully")
       setEmailOtp("")
+      emailOtpRef.current = ""
     } else {
       toast.error(result.payload || "Invalid OTP")
     }
@@ -546,72 +517,34 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
               )}
             </div>
 
-            {/* Branch (Nation → State → Branch) */}
-            <div className="space-y-3">
+            {/* Branch – single selector (State/Nation linked automatically per guide) */}
+            <div className="space-y-2">
               <Label>Branch *</Label>
               <p className="text-xs text-muted-foreground">
-                Select Nation, then State, then Branch. Every RM must be assigned to a branch.
+                Select the branch for this RM. State and Nation are linked automatically.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Nation</Label>
-                  <Select
-                    value={selectedNationId}
-                    onValueChange={setSelectedNationId}
-                    disabled={otpLoading.initiating || hierarchyLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select nation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {nations.map((n) => (
-                        <SelectItem key={n.id} value={String(n.id)}>
-                          {n.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">State</Label>
-                  <Select
-                    value={selectedStateId}
-                    onValueChange={setSelectedStateId}
-                    disabled={!selectedNationId || otpLoading.initiating || hierarchyLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {states.map((s) => (
-                        <SelectItem key={s.id} value={String(s.id)}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Branch</Label>
-                  <Select
-                    value={selectedBranchId}
-                    onValueChange={setSelectedBranchId}
-                    disabled={!selectedStateId || otpLoading.initiating || hierarchyLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>
-                          {b.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {!selectedBranchId && (selectedStateId || selectedNationId) && (
+              <Select
+                value={selectedBranchId}
+                onValueChange={setSelectedBranchId}
+                disabled={otpLoading.initiating || hierarchyLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => {
+                    const label = [b.name, b.state_name, b.nation_name].filter(Boolean).length > 1
+                      ? `${b.name} (${[b.state_name, b.nation_name].filter(Boolean).join(", ")})`
+                      : b.name
+                    return (
+                      <SelectItem key={b.id} value={String(b.id)}>
+                        {label}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              {!selectedBranchId && (
                 <p className="text-xs text-amber-600">
                   Please select a branch to continue.
                 </p>
@@ -683,16 +616,12 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
               </p>
             </div>
 
-            {/* Dev OTP hint */}
-            {devOtps.mobile && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800 text-center">
-                <strong>Dev Mode:</strong> OTP is {devOtps.mobile}
-              </div>
-            )}
-
             <OTPInput
               value={mobileOtp}
-              onChange={setMobileOtp}
+              onChange={(val) => {
+                setMobileOtp(val)
+                mobileOtpRef.current = val
+              }}
               disabled={otpLoading.verifyingMobile}
             />
 
@@ -757,16 +686,12 @@ const CreateRMModal = ({ open, onOpenChange, onSuccess }) => {
               </p>
             </div>
 
-            {/* Dev OTP hint */}
-            {devOtps.email && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800 text-center">
-                <strong>Dev Mode:</strong> OTP is {devOtps.email}
-              </div>
-            )}
-
             <OTPInput
               value={emailOtp}
-              onChange={setEmailOtp}
+              onChange={(val) => {
+                setEmailOtp(val)
+                emailOtpRef.current = val
+              }}
               disabled={otpLoading.verifyingEmail}
             />
 

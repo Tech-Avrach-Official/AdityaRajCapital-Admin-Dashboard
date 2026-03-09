@@ -4,7 +4,6 @@ import {
   Users,
   Package,
   DollarSign,
-  FileCheck,
   Settings,
   FileText,
   ChevronRight,
@@ -136,12 +135,6 @@ const AdminSidebar = ({ onMobileClose }) => {
           icon: CreditCard,
         },
       ],
-    },
-    {
-      id: "kyc",
-      name: "KYC Verification",
-      icon: FileCheck,
-      path: "/admin/kyc",
     },
     {
       id: "settings",

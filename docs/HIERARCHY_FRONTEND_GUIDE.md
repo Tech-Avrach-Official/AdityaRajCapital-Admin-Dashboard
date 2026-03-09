@@ -40,12 +40,16 @@ Nation (e.g. North, South, Center)
                           └── Investor (via Partner or direct RM)
 ```
 
+### RM creation: only Branch selection
+
+When creating an RM, the frontend **only** needs to let the user **select the Branch**. The RM is then **merged into the hierarchy automatically** (that branch already has a State and Nation). No need to show Nation or State as separate selectors on the RM create form.
+
 ### Rules
 
 - **Nations**: Admin creates/edits/deletes. Delete blocked if any state is assigned.
 - **States**: Pre-seeded (36 Indian states/UTs). Admin only **assigns/unassigns** a nation per state. One state → one nation.
 - **Branches**: Admin creates under a state. Name unique per state. Delete blocked if any RM is assigned.
-- **RM**: Must have a **branch_id** when created (OTP flow or direct). Can update branch later.
+- **RM**: Must have a **branch_id** when created (OTP flow or direct). User **only selects Branch**; hierarchy placement is automatic. Can update branch later.
 - **Partners**: Branch = their RM’s branch (no extra field).
 - **Investors**: Branch = RM’s branch or Partner’s RM’s branch (derived).
 
@@ -58,14 +62,14 @@ Nation (e.g. North, South, Center)
 | Area | What to build |
 |------|----------------|
 | **Hierarchy** | Nations CRUD, States list + assign nation, Branches CRUD (by state). |
-| **RM** | Create RM: **require branch selection** (Nation → State → Branch dropdown/cascades). List RMs with optional filters (nation/state/branch) and show branch/state/nation names. Edit RM: allow changing branch. |
+| **RM** | Create RM: **only Branch selection** — user picks one Branch; the RM is merged into the hierarchy (Branch → State → Nation) automatically. List RMs with optional filters and show branch/state/nation names. Edit RM: allow changing branch. |
 | **Partners** | Optional filter by `branch_id`; show branch (e.g. via RM’s branch). |
 | **Investors** | Optional filter by `branch_id` (e.g. on list page). |
 
 ### Data Flow (high level)
 
 1. **Setup order**: Create Nations → Assign States to Nations → Create Branches (per State) → Create RMs (per Branch).
-2. **Create RM**: User must select **Branch** (and thus State/Nation are implied). Send `branch_id` in both OTP and direct create.
+2. **Create RM**: User **only selects Branch**. Send `branch_id` in the create request (OTP or direct). The backend places the RM under that branch; State and Nation are already linked to the branch, so the RM is in the hierarchy automatically.
 3. **List RMs**: Support query params `branch_id`, `state_id`, `nation_id`; display `branch_name`, `state_name`, `nation_name` from response.
 4. **List Partners/Investors**: Add optional `branch_id` query; use same list APIs with filter.
 
@@ -501,11 +505,9 @@ Branch is **derived** from RM (and for investors, from Partner’s RM or direct 
 
 ### Summary
 
-1. **Branch is required** for every new RM (OTP flow and direct create).
-2. Frontend must:
-   - Either show **Nation → State → Branch** (cascading) and send the chosen **branch_id**, or
-   - Show a single **Branch** dropdown (loaded from `GET /api/admin/branches`) and send that **branch_id**.
-3. Initiate and direct create both require **branch_id** in the body (and files where applicable).
+1. **Only Branch is selected** when creating an RM. The frontend shows a **single Branch** selector (dropdown or list). No need to show Nation or State for RM create — the branch already belongs to a State and Nation in the backend.
+2. User picks **one Branch** → frontend sends **branch_id** in the create request (OTP flow or direct). The RM is **merged into the hierarchy automatically**: Branch → State → Nation are already linked, so the new RM is placed under that branch.
+3. **Branch is required** for every new RM. Initiate and direct create both require **branch_id** in the body (and files where applicable).
 4. After create, RM appears in list with `branch_id`, `branch_name`, `state_name`, `nation_name` when you use `GET /api/admin/rm/list`.
 
 ### OTP flow (recommended)
@@ -541,10 +543,8 @@ Branch is **derived** from RM (and for investors, from Partner’s RM or direct 
 
 ### RM create screen
 
-1. Load branches: `GET /api/admin/branches` (optionally with `state_id` or `nation_id` for cascading).
-2. Show either:
-   - **Cascading:** Nation dropdown → State dropdown (filtered by nation) → Branch dropdown (filtered by state), or
-   - **Single:** One “Branch” dropdown (e.g. grouped by Nation > State).
+1. **Load branches:** `GET /api/admin/branches` — use this to build a **single Branch** dropdown (or searchable list). Each branch in the response already has `state_name` and `nation_name`; you can show them as labels (e.g. “Mumbai Main (Maharashtra, North)”) so the user knows which branch they’re selecting.
+2. **Only Branch is selected for hierarchy.** User selects **one Branch**; no need to show Nation or State as separate fields. With that selection, the RM is merged into the hierarchy automatically.
 3. Collect: Name, Phone, Email, Password, **Branch** (store `branch_id`), Aadhaar image, PAN image.
 4. Submit to **POST /api/admin/rm/initiate** (or direct create) including **branch_id**.
 5. If OTP flow: collect OTPs and call verify + complete as above.

@@ -4,6 +4,8 @@ export const mockKYC = [
   {
     id: "kyc-001",
     userId: "investor-003",
+    investorId: 3,
+    partnerId: null,
     userName: "Rohit Malhotra",
     email: "rohit.malhotra@example.com",
     mobile: "+91 98765 43302",
@@ -44,6 +46,8 @@ export const mockKYC = [
   {
     id: "kyc-002",
     userId: "partner-004",
+    investorId: null,
+    partnerId: 4,
     userName: "Neha Gupta",
     email: "neha.gupta@example.com",
     mobile: "+91 98765 43223",
@@ -79,6 +83,8 @@ export const mockKYC = [
   {
     id: "kyc-003",
     userId: "investor-004",
+    investorId: 4,
+    partnerId: null,
     userName: "Suresh Iyer",
     email: "suresh.iyer@example.com",
     mobile: "+91 98765 43303",

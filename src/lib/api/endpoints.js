@@ -5,6 +5,7 @@ export const endpoints = {
   admin: {
     login: "/api/admin/login",
     investorKycDocuments: (investorId) => `/api/admin/investors/${investorId}/kyc-documents`,
+    partnerKycDocuments: (partnerId) => `/api/admin/partners/${partnerId}/kyc-documents`,
     investorPurchases: (investorId) => `/api/admin/investors/${investorId}/purchases`,
   },
 
@@ -82,10 +83,16 @@ export const endpoints = {
     reject: (id) => `/api/kyc/${id}/reject`,
   },
 
-  // Dashboard
+  // Dashboard – see docs/DASHBOARD_FRONTEND_GUIDE.md
   dashboard: {
-    metrics: "/api/dashboard/metrics",
-    charts: "/api/dashboard/charts",
+    base: "/api/admin/dashboard",
+    summary: "/api/admin/dashboard/summary",
+    pendingKyc: "/api/admin/dashboard/pending-kyc",
+    commissionStats: "/api/admin/dashboard/commission-stats",
+    investmentVolume: "/api/admin/dashboard/investment-volume",
+    userGrowth: "/api/admin/dashboard/user-growth",
+    investmentByPlan: "/api/admin/dashboard/investment-by-plan",
+    installmentSummary: "/api/admin/dashboard/installment-summary",
   },
 
   // Settings

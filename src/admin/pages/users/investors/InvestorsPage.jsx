@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react"
-import { useMemo } from "react"
-import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
-import { toast } from "react-hot-toast"
-import { format } from "date-fns"
-import { MoreHorizontal, Eye, Edit } from "lucide-react"
+import React, { useState, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+} from "@tanstack/react-table"
+import { ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, Search } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
-import FilterBar from "@/components/common/FilterBar"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
   Table,
@@ -16,216 +18,403 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { usersService, hierarchyService } from "@/lib/api/services"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { mockInvestorsList, mockBranches } from "@/lib/mockData/investors"
+import { cn } from "@/lib/utils"
+
+const formatINR = (amount) => {
+  if (amount == null) return "—"
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "—")
 
 const InvestorsPage = () => {
-  const [investors, setInvestors] = useState([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
   const [searchValue, setSearchValue] = useState("")
-  const [kycStatusFilter, setKycStatusFilter] = useState("all")
-  const [branchFilterId, setBranchFilterId] = useState("all")
-  const [branches, setBranches] = useState([])
+  const [kycFilter, setKycFilter] = useState("all")
+  const [branchFilter, setBranchFilter] = useState("all")
+  const [exporting, setExporting] = useState(false)
+  const [sorting, setSorting] = useState([])
 
-  useEffect(() => {
-    hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? []))
-  }, [])
+  const branches = useMemo(() => mockBranches(), [])
 
-  useEffect(() => {
-    loadInvestors()
-  }, [searchValue, kycStatusFilter, branchFilterId])
-
-  const loadInvestors = async () => {
-    setLoading(true)
-    try {
-      const response = await usersService.getInvestors({
-        search: searchValue,
-        kycStatus: kycStatusFilter !== "all" ? kycStatusFilter : undefined,
-        branch_id: branchFilterId && branchFilterId !== "all" ? branchFilterId : undefined,
-      })
-      setInvestors(response.data)
-    } catch (error) {
-      toast.error("Failed to load investors")
-    } finally {
-      setLoading(false)
+  const filteredInvestors = useMemo(() => {
+    let list = [...mockInvestorsList]
+    const q = searchValue.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (i) =>
+          (i.client_id && i.client_id.toLowerCase().includes(q)) ||
+          (i.name && i.name.toLowerCase().includes(q)) ||
+          (i.email && i.email.toLowerCase().includes(q))
+      )
     }
+    if (kycFilter !== "all") {
+      list = list.filter((i) => (i.kyc_status || "").toLowerCase() === kycFilter.toLowerCase())
+    }
+    if (branchFilter !== "all") {
+      list = list.filter((i) => String(i.branch_id) === String(branchFilter))
+    }
+    return list
+  }, [searchValue, kycFilter, branchFilter])
+
+  const handleExport = () => {
+    setExporting(true)
+    setTimeout(() => {
+      const headers = [
+        "Client ID",
+        "Name",
+        "Email",
+        "Mobile",
+        "Referral",
+        "KYC",
+        "Total Invested",
+        "Verified Count",
+        "Last Verified",
+        "Created",
+      ]
+      const rows = filteredInvestors.map((i) =>
+        [
+          i.client_id,
+          i.name,
+          i.email,
+          i.mobile,
+          i.referral,
+          i.kyc_status,
+          i.total_invested ?? "",
+          i.verified_count ?? "",
+          i.last_verified ?? "",
+          i.created ?? "",
+        ].join(",")
+      )
+      const csv = [headers.join(","), ...rows].join("\n")
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `investors-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      setExporting(false)
+    }, 400)
   }
 
   const columns = useMemo(
     () => [
       {
-        accessorKey: "name",
-        header: "Name",
+        accessorKey: "client_id",
+        header: ({ column }) => (
+          <button
+            className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Client ID
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 opacity-50" />
+            )}
+          </button>
+        ),
         cell: ({ row }) => (
-          <button className="text-primary hover:underline font-medium">
-            {row.original.name}
+          <span className="font-mono text-sm">{row.original.client_id || "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "name",
+        header: ({ column }) => (
+          <button
+            className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Name
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 opacity-50" />
+            )}
+          </button>
+        ),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            className="text-left font-medium text-primary hover:underline"
+            onClick={() => navigate(`/admin/users/investors/${row.original.id}`)}
+          >
+            {row.original.name || "—"}
           </button>
         ),
       },
-      { accessorKey: "email", header: "Email" },
-      { accessorKey: "mobile", header: "Mobile" },
       {
-        accessorKey: "investorId",
-        header: "Investor ID",
-        cell: ({ row }) => row.original.client_id || row.original.investorId || "-",
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.email || "—"}</span>
+        ),
       },
       {
-        accessorKey: "partnerName",
-        header: "Partner",
-        cell: ({ row }) =>
-          row.original.partner?.partner_name || row.original.partnerName || "Direct",
+        accessorKey: "mobile",
+        header: "Mobile",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.mobile || "—"}</span>
+        ),
       },
       {
-        accessorKey: "kycStatus",
-        header: "KYC Status",
-        cell: ({ row }) => {
-          const status = row.original.kyc_complete === 1 ? "verified" : row.original.kycStatus ?? "pending"
-          return <StatusBadge status={status} />
-        },
+        accessorKey: "referral",
+        header: "Referral",
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.referral || "Direct"}</span>
+        ),
       },
       {
-        accessorKey: "totalInvestments",
-        header: "Investments",
-        cell: ({ row }) => row.original.totalInvestments ?? "-",
+        accessorKey: "kyc_status",
+        header: "KYC",
+        cell: ({ row }) => (
+          <StatusBadge
+            status={row.original.kyc_status === "complete" ? "verified" : "pending"}
+            customLabel={row.original.kyc_status === "complete" ? "Complete" : "Pending"}
+          />
+        ),
       },
       {
-        accessorKey: "totalInvested",
-        header: "Total Invested",
-        cell: ({ row }) =>
-          row.original.totalInvested != null
-            ? new Intl.NumberFormat("en-IN", {
-                style: "currency",
-                currency: "INR",
-                maximumFractionDigits: 0,
-              }).format(row.original.totalInvested)
-            : "-",
+        accessorKey: "total_invested",
+        header: ({ column }) => (
+          <button
+            className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Total invested
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 opacity-50" />
+            )}
+          </button>
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium tabular-nums">{formatINR(row.original.total_invested)}</span>
+        ),
       },
       {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        accessorKey: "verified_count",
+        header: "Verified count",
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original.verified_count ?? "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "last_verified",
+        header: ({ column }) => (
+          <button
+            className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Last verified
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 opacity-50" />
+            )}
+          </button>
+        ),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm">
+            {formatDate(row.original.last_verified)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "created",
+        header: ({ column }) => (
+          <button
+            className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Created
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 opacity-50" />
+            )}
+          </button>
+        ),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm">{formatDate(row.original.created)}</span>
+        ),
       },
       {
         id: "actions",
         header: "Actions",
-        cell: () => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        cell: ({ row }) => (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => navigate(`/admin/users/investors/${row.original.id}`)}
+          >
+            <Eye className="h-4 w-4" />
+            View
+          </Button>
         ),
       },
     ],
-    []
+    [navigate]
   )
 
   const table = useReactTable({
-    data: investors,
+    data: filteredInvestors,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   })
-
-  const filters = [
-    {
-      key: "kycStatus",
-      value: kycStatusFilter,
-      placeholder: "KYC Status",
-      options: [
-        { value: "all", label: "All" },
-        { value: "verified", label: "Verified" },
-        { value: "pending", label: "Pending" },
-        { value: "rejected", label: "Rejected" },
-      ],
-    },
-    {
-      key: "branch_id",
-      value: branchFilterId,
-      placeholder: "Branch",
-      options: [
-        { value: "all", label: "All Branches" },
-        ...(branches.map((b) => ({ value: String(b.id), label: b.name })) ?? []),
-      ],
-    },
-  ]
 
   return (
     <div className="space-y-6">
       <PageHeader title="Investors" />
 
-      <FilterBar
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        searchPlaceholder="Search by name, email, Investor ID..."
-        filters={filters}
-        onFilterChange={(key, value) => {
-          if (key === "kycStatus") setKycStatusFilter(value)
-          if (key === "branch_id") setBranchFilterId(value)
-        }}
-        onClearFilters={() => {
-          setSearchValue("")
-          setKycStatusFilter("all")
-          setBranchFilterId("all")
-        }}
-      />
-
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
+      {/* Toolbar */}
+      <div className="rounded-xl border border-border/60 bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by Client ID or name..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All branches</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
               ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+            </SelectContent>
+          </Select>
+          <Select value={kycFilter} onValueChange={setKycFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="KYC" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="pending">KYC Pending</SelectItem>
+              <SelectItem value="complete">KYC Complete</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="default"
+            className="gap-2"
+            onClick={handleExport}
+            disabled={exporting || filteredInvestors.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            {exporting ? "Exporting…" : "Export"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-6 space-y-4">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : filteredInvestors.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <p className="text-lg font-medium text-foreground">No investors found</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+              Try clearing filters or search to see all investors.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                setSearchValue("")
+                setKycFilter("all")
+                setBranchFilter("all")
+              }}
+            >
+              Clear filters
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id} className="font-semibold">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row, idx) => (
+                  <TableRow
+                    key={row.id}
+                    className={cn(
+                      "cursor-pointer transition-colors",
+                      idx % 2 === 1 && "bg-muted/20"
+                    )}
+                    onClick={(e) => {
+                      if (!e.target.closest("button")) {
+                        navigate(`/admin/users/investors/${row.original.id}`)
+                      }
+                    }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
