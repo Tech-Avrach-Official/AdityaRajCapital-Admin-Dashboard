@@ -464,10 +464,10 @@ const Dashboard = () => {
                 Upload Payout PDF
               </Button>
             </Link>
-            <Link to="/admin/products">
+            <Link to="/admin/plans">
               <Button variant="outline" className="gap-2">
                 <Settings className="w-4 h-4" />
-                Configure Commission
+                Manage Plans
               </Button>
             </Link>
             <Button variant="outline" className="gap-2">

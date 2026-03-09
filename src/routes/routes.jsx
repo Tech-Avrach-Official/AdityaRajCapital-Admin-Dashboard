@@ -7,6 +7,10 @@ import RMsPage from "../admin/pages/users/rms/RMsPage"
 import PartnersPage from "../admin/pages/users/partners/PartnersPage"
 import InvestorsPage from "../admin/pages/users/investors/InvestorsPage"
 import ProductsPage from "../admin/pages/products/ProductsPage"
+import PlansListPage from "../admin/pages/plans/PlansListPage"
+import CreatePlanPage from "../admin/pages/plans/CreatePlanPage"
+import PlanDetailPage from "../admin/pages/plans/PlanDetailPage"
+import EditPlanPage from "../admin/pages/plans/EditPlanPage"
 import InvestmentsPage from "../admin/pages/financial/investments/InvestmentsPage"
 import PayoutsPage from "../admin/pages/financial/payouts/PayoutsPage"
 import CommissionsPage from "../admin/pages/financial/commissions/CommissionsPage"
@@ -40,8 +44,14 @@ const AllRoutes = () => {
         <Route path="users/partners" element={<PartnersPage />} />
         <Route path="users/investors" element={<InvestorsPage />} />
 
-        {/* Products */}
+        {/* Products (legacy) */}
         <Route path="products" element={<ProductsPage />} />
+
+        {/* Plans (full CRUD) */}
+        <Route path="plans" element={<PlansListPage />} />
+        <Route path="plans/new" element={<CreatePlanPage />} />
+        <Route path="plans/:id" element={<PlanDetailPage />} />
+        <Route path="plans/:id/edit" element={<EditPlanPage />} />
 
         {/* Financial Management */}
         <Route path="financial/investments" element={<InvestmentsPage />} />

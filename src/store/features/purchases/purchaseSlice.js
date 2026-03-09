@@ -105,7 +105,7 @@ const purchaseSlice = createSlice({
     builder
       .addCase(verifyPayment.pending, (state, action) => {
         state.verifying = true
-        state.processingId = action.meta.arg // purchaseId
+        state.processingId = action.meta.arg?.purchaseId ?? action.meta.arg
         state.error = null
       })
       .addCase(verifyPayment.fulfilled, (state, action) => {

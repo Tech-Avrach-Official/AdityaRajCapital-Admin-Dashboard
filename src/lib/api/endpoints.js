@@ -48,11 +48,20 @@ export const endpoints = {
     investor: (id) => `/api/users/investors/${id}`,
   },
 
-  // Products
+  // Products (legacy)
   products: {
     list: "/api/products",
     detail: (id) => `/api/products/${id}`,
     commission: (id) => `/api/products/${id}/commission`,
+  },
+
+  // Plans (Admin – full CRUD)
+  plans: {
+    list: "/api/admin/plans",
+    get: (id) => `/api/admin/plans/${id}`,
+    create: "/api/admin/plans",
+    update: (id) => `/api/admin/plans/${id}`,
+    delete: (id) => `/api/admin/plans/${id}`,
   },
 
   // Financial
@@ -84,6 +93,7 @@ export const endpoints = {
     payoutPhases: "/api/settings/payout-phases",
     system: "/api/settings/system",
     templates: "/api/settings/templates",
+    tds: "/api/admin/settings/tds",
   },
 
   // Audit

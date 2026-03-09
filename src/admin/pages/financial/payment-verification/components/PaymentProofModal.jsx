@@ -33,21 +33,21 @@ const formatINR = (amount) => {
 const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
-  const [fetchedUrl, setFetchedUrl] = useState(null)
+  const [fetchedUrls, setFetchedUrls] = useState([]) // API returns data.urls array
   const [loadingUrl, setLoadingUrl] = useState(false)
   const [urlError, setUrlError] = useState(null)
 
-  // Fetch signed URL when no URL available but purchase has id (GET /api/admin/purchases/:id/payment-proof-url)
+  // Fetch signed URL(s) - GET /api/admin/purchases/:id/payment-proof-url returns data.urls[]
   useEffect(() => {
     if (!isOpen || !purchase?.id) {
-      setFetchedUrl(null)
+      setFetchedUrls([])
       setUrlError(null)
       return
     }
 
-    const hasUrl = purchase.resolved_payment_proof_url || purchase.payment_proof_url
-    if (hasUrl) {
-      setFetchedUrl(null)
+    const singleInlineUrl = purchase.resolved_payment_proof_url || purchase.payment_proof_url
+    if (singleInlineUrl) {
+      setFetchedUrls([singleInlineUrl])
       setUrlError(null)
       return
     }
@@ -58,9 +58,10 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
 
     purchasesService
       .getPaymentProofUrl(purchase.id)
-      .then((url) => {
+      .then((result) => {
         if (!cancelled) {
-          setFetchedUrl(url)
+          const urls = result?.urls && Array.isArray(result.urls) ? result.urls : []
+          setFetchedUrls(urls)
         }
       })
       .catch((err) => {
@@ -92,8 +93,15 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
     payment_proof_file_type,
   } = purchase
 
-  // Get the URL to display (prefer inline URL, then fetched signed URL)
-  const proofUrl = resolved_payment_proof_url || payment_proof_url || fetchedUrl
+  // Build array of proof URLs (inline single or fetched array)
+  const proofUrls =
+    fetchedUrls.length > 0
+      ? fetchedUrls
+      : resolved_payment_proof_url || payment_proof_url
+        ? [resolved_payment_proof_url || payment_proof_url]
+        : []
+  const proofUrl = proofUrls[0] || null
+  const hasMultiple = proofUrls.length > 1
   const fileType = payment_proof_file_type || "unknown"
   const isImage = fileType === "image"
   const isPdf = fileType === "pdf"
@@ -110,31 +118,45 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
     setRotation((prev) => (prev + 90) % 360)
   }
 
-  const handleDownload = async () => {
-    if (!proofUrl) return
+  const getDownloadFilename = (fileIndex) => {
+    const base = `payment-proof-${id}`
+    const suffix = fileIndex != null ? `-${fileIndex + 1}` : ""
+    return `${base}${suffix}.png`
+  }
+
+  const handleDownload = async (urlToUse = proofUrl, fileIndex = null) => {
+    if (!urlToUse) return
+
+    const filename = getDownloadFilename(fileIndex)
 
     try {
-      const response = await fetch(proofUrl)
+      const response = await fetch(urlToUse, { mode: "cors", credentials: "omit" })
+      if (!response.ok) throw new Error(response.statusText)
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const objectUrl = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
-      link.href = url
-      link.download = `payment-proof-${id}`
+      link.href = objectUrl
+      link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Download failed:", error)
-      // Fallback: open in new tab
-      window.open(proofUrl, "_blank")
+      window.URL.revokeObjectURL(objectUrl)
+    } catch {
+      // CORS or network error: try forcing download via anchor (no fetch).
+      // Browser may still open in new tab if response is inline; then user can right-click → Save.
+      const link = document.createElement("a")
+      link.href = urlToUse
+      link.download = filename
+      link.rel = "noopener noreferrer"
+      link.target = "_blank"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
   }
 
-  const handleOpenInNewTab = () => {
-    if (proofUrl) {
-      window.open(proofUrl, "_blank")
-    }
+  const handleOpenInNewTab = (urlToUse = proofUrl) => {
+    if (urlToUse) window.open(urlToUse, "_blank", "noopener,noreferrer")
   }
 
   const handleClose = () => {
@@ -191,24 +213,24 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
                 </>
               )}
 
-              {/* Open in new tab */}
+              {/* Open in new tab - first proof */}
               {proofUrl && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleOpenInNewTab}
+                  onClick={() => handleOpenInNewTab()}
                   title="Open in new tab"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </Button>
               )}
 
-              {/* Download */}
+              {/* Download - first proof */}
               {proofUrl && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleDownload}
+                  onClick={() => handleDownload()}
                   title="Download"
                 >
                   <Download className="w-4 h-4" />
@@ -255,7 +277,7 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
         </div>
 
         {/* Content container */}
-        <div className="flex-1 overflow-auto bg-gray-900/95 flex items-center justify-center p-4">
+        <div className="flex-1 min-h-0 overflow-auto bg-gray-900/95 flex items-center justify-center p-4">
           {loadingUrl ? (
             <div className="text-center text-gray-400">
               <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin" />
@@ -267,48 +289,90 @@ const PaymentProofModal = ({ isOpen, onClose, purchase }) => {
               <p className="text-lg font-medium">Could not load payment proof</p>
               <p className="text-sm mt-2 text-red-400">{urlError}</p>
             </div>
-          ) : proofUrl ? (
+          ) : proofUrls.length > 0 ? (
             <>
-              {isImage && (
-                <div
-                  className="transition-transform duration-200 ease-out"
-                  style={{
-                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                  }}
-                >
-                  <img
-                    src={proofUrl}
-                    alt="Payment Proof"
-                    className="max-w-full max-h-full object-contain"
-                    style={{
-                      maxHeight: "calc(90vh - 200px)",
-                    }}
-                  />
+              {hasMultiple ? (
+                <div className="w-full max-w-5xl py-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {proofUrls.map((url, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col items-center gap-2 rounded-lg overflow-hidden bg-black/30 border border-white/10 p-2"
+                      >
+                        <div className="w-full flex justify-center bg-black/20 rounded min-h-[120px]">
+                          <img
+                            src={url}
+                            alt={`Payment proof ${index + 1}`}
+                            className="max-h-[50vh] max-w-full w-auto object-contain"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Payment proof {index + 1} of {proofUrls.length}</p>
+                        <div className="flex gap-2 flex-wrap justify-center">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleOpenInNewTab(url)}
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            Open
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleDownload(url, index)}
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
+              ) : (
+                <>
+                  {isImage && (
+                    <div
+                      className="transition-transform duration-200 ease-out"
+                      style={{
+                        transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                      }}
+                    >
+                      <img
+                        src={proofUrl}
+                        alt="Payment Proof"
+                        className="max-w-full max-h-full object-contain"
+                        style={{
+                          maxHeight: "calc(90vh - 200px)",
+                        }}
+                      />
+                    </div>
+                  )}
 
-              {isPdf && (
-                <iframe
-                  src={proofUrl}
-                  className="w-full h-full border-0"
-                  title="Payment Proof PDF"
-                />
-              )}
+                  {isPdf && (
+                    <iframe
+                      src={proofUrl}
+                      className="w-full h-full border-0"
+                      title="Payment Proof PDF"
+                    />
+                  )}
 
-              {!isImage && !isPdf && (
-                <div className="text-center text-gray-400">
-                  <FileText className="w-16 h-16 mx-auto mb-4" />
-                  <p>Unable to preview this file type</p>
-                  <p className="text-sm mt-2">File path: {payment_proof_file_path}</p>
-                  <Button
-                    variant="secondary"
-                    className="mt-4"
-                    onClick={handleOpenInNewTab}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open in New Tab
-                  </Button>
-                </div>
+                  {!isImage && !isPdf && (
+                    <div className="text-center text-gray-400">
+                      <FileText className="w-16 h-16 mx-auto mb-4" />
+                      <p>Unable to preview this file type</p>
+                      <p className="text-sm mt-2">File path: {payment_proof_file_path}</p>
+                      <Button
+                        variant="secondary"
+                        className="mt-4"
+                        onClick={() => handleOpenInNewTab()}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in New Tab
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           ) : (

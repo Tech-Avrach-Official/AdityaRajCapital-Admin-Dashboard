@@ -73,10 +73,10 @@ const AdminSidebar = ({ onMobileClose }) => {
       ],
     },
     {
-      id: "products",
-      name: "Products",
+      id: "plans",
+      name: "Plans",
       icon: Package,
-      path: "/admin/products",
+      path: "/admin/plans",
     },
     {
       id: "financial",

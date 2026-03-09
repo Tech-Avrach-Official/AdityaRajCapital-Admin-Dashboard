@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { usePurchases } from "@/hooks"
 import PaymentProofModal from "./components/PaymentProofModal"
 import RejectPaymentModal from "./components/RejectPaymentModal"
+import ApprovePaymentModal from "./components/ApprovePaymentModal"
 
 /**
  * Format currency in INR
@@ -53,7 +54,9 @@ const PaymentVerificationPage = () => {
   const [searchValue, setSearchValue] = useState("")
   const [proofModalOpen, setProofModalOpen] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [approveModalOpen, setApproveModalOpen] = useState(false)
   const [selectedPurchase, setSelectedPurchase] = useState(null)
+  const [approveError, setApproveError] = useState(null) // { message, error_code } for VAL_001 etc.
 
   // Load pending verifications on mount
   useEffect(() => {
@@ -71,14 +74,34 @@ const PaymentVerificationPage = () => {
     setProofModalOpen(true)
   }
 
-  // Handle approve payment
-  const handleApprove = async (purchaseId) => {
+  // Helper: get user-facing error message from reject/verify payload (string or { message, error_code })
+  const getErrorMessage = (payload) =>
+    payload && typeof payload === "object" && "message" in payload ? payload.message : payload
+
+  // Open approve modal
+  const handleApproveClick = (purchase) => {
+    setApproveError(null)
+    setSelectedPurchase(purchase)
+    setApproveModalOpen(true)
+  }
+
+  // Handle approve submission from modal (with cheque number)
+  const handleApproveSubmit = async ({ cheque_number }) => {
+    if (!selectedPurchase) return
+    setApproveError(null)
     try {
-      const result = await verifyPayment(purchaseId)
+      const result = await verifyPayment(selectedPurchase.id, cheque_number)
       if (result.meta?.requestStatus === "fulfilled") {
         toast.success("Payment verified successfully")
+        setApproveModalOpen(false)
+        setSelectedPurchase(null)
       } else {
-        toast.error(result.payload || "Failed to verify payment")
+        const payload = result.payload
+        const message = getErrorMessage(payload)
+        toast.error(message || "Failed to verify payment")
+        if (payload?.error_code === "VAL_001") {
+          setApproveError(payload.message || "Cheque number is required when approving payment")
+        }
       }
     } catch (error) {
       toast.error("Failed to verify payment")
@@ -102,7 +125,7 @@ const PaymentVerificationPage = () => {
         setRejectModalOpen(false)
         setSelectedPurchase(null)
       } else {
-        toast.error(result.payload || "Failed to reject payment")
+        toast.error(getErrorMessage(result.payload) || "Failed to reject payment")
       }
     } catch (error) {
       toast.error("Failed to reject payment")
@@ -190,7 +213,7 @@ const PaymentVerificationPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleApprove(purchase.id)}
+                onClick={() => handleApproveClick(purchase)}
                 disabled={isProcessing}
                 className="text-green-600 hover:text-green-700 hover:bg-green-50"
                 title="Approve Payment"
@@ -321,6 +344,20 @@ const PaymentVerificationPage = () => {
           setSelectedPurchase(null)
         }}
         purchase={selectedPurchase}
+      />
+
+      {/* Approve Payment Modal */}
+      <ApprovePaymentModal
+        isOpen={approveModalOpen}
+        onClose={() => {
+          setApproveModalOpen(false)
+          setSelectedPurchase(null)
+          setApproveError(null)
+        }}
+        purchase={selectedPurchase}
+        onApprove={handleApproveSubmit}
+        isLoading={verifying}
+        chequeError={approveError}
       />
 
       {/* Reject Payment Modal */}

@@ -56,10 +56,10 @@ export const usePurchases = () => {
     [dispatch]
   )
 
-  // Verify (approve) a payment
+  // Verify (approve) a payment - requires cheque_number
   const verifyPayment = useCallback(
-    async (purchaseId) => {
-      const result = await dispatch(verifyPaymentThunk(purchaseId))
+    async (purchaseId, cheque_number) => {
+      const result = await dispatch(verifyPaymentThunk({ purchaseId, cheque_number }))
       return result
     },
     [dispatch]

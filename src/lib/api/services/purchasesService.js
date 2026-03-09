@@ -104,38 +104,56 @@ export const purchasesService = {
   },
 
   // =====================
-  // Get Payment Proof URL (signed URL - preferred over payment_proof_file_path)
+  // Get Payment Proof URL(s) - signed URLs (API returns data.urls array)
   // =====================
 
   async getPaymentProofUrl(purchaseId) {
     if (USE_MOCK_DATA) {
       await delay(300)
       const purchase = mockPendingPurchases.find((p) => p.id === purchaseId)
-      return purchase?.payment_proof_url ?? null
+      const url = purchase?.payment_proof_url ?? null
+      return { urls: url ? [url] : [], expires_in_seconds: 3600 }
     }
 
     const response = await apiClient.get(endpoints.purchases.paymentProofUrl(purchaseId))
-    return response.data?.data?.url ?? null
+    const data = response.data?.data ?? {}
+    // New API: data.urls = [{ url: "..." }, ...]; legacy: data.url
+    const urls = Array.isArray(data.urls)
+      ? data.urls.map((u) => (typeof u === "string" ? u : u?.url)).filter(Boolean)
+      : data.url
+        ? [data.url]
+        : []
+    return { urls, expires_in_seconds: data.expires_in_seconds ?? 3600 }
   },
 
   // =====================
-  // Verify Payment (Approve)
+  // Verify Payment (Approve) - requires cheque_number in body
   // =====================
 
-  async verifyPayment(purchaseId) {
+  async verifyPayment(purchaseId, { cheque_number } = {}) {
+    const trimmedCheque = typeof cheque_number === "string" ? cheque_number.trim() : ""
+
     if (USE_MOCK_DATA) {
       await delay(600)
 
+      if (!trimmedCheque) {
+        throw {
+          message: "Cheque number is required when approving payment",
+          status: 400,
+          error_code: "VAL_001",
+        }
+      }
+
       const purchase = mockPendingPurchases.find((p) => p.id === purchaseId)
       if (!purchase) {
-        throw { message: "Purchase not found", status: 404 }
+        throw { message: "Purchase not found", status: 404, error_code: "PURCHASE_NOT_FOUND" }
       }
 
       if (mockVerifiedPurchases.includes(purchaseId)) {
         throw {
           message: "Payment has already been verified",
           status: 400,
-          code: "PURCHASE_INVALID_STATUS",
+          error_code: "PURCHASE_INVALID_STATUS",
         }
       }
 
@@ -143,11 +161,10 @@ export const purchasesService = {
         throw {
           message: "Cannot verify a rejected payment",
           status: 400,
-          code: "PURCHASE_INVALID_STATUS",
+          error_code: "PURCHASE_INVALID_STATUS",
         }
       }
 
-      // Mark as verified
       mockVerifiedPurchases.push(purchaseId)
 
       return {
@@ -157,11 +174,14 @@ export const purchasesService = {
           purchase_id: purchaseId,
           status: "payment_verified",
           payment_verified_at: new Date().toISOString(),
+          cheque_number: trimmedCheque,
         },
       }
     }
 
-    const response = await apiClient.post(endpoints.purchases.verifyPayment(purchaseId))
+    const response = await apiClient.post(endpoints.purchases.verifyPayment(purchaseId), {
+      cheque_number: trimmedCheque,
+    })
     return response.data
   },
 

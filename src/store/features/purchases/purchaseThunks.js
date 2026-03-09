@@ -29,23 +29,25 @@ export const fetchPendingVerifications = createAsyncThunk(
 )
 
 /**
- * Verify (approve) a payment
+ * Verify (approve) a payment - requires cheque_number
  */
 export const verifyPayment = createAsyncThunk(
   "purchases/verifyPayment",
-  async (purchaseId, { rejectWithValue }) => {
+  async ({ purchaseId, cheque_number }, { rejectWithValue }) => {
     try {
-      const result = await purchasesService.verifyPayment(purchaseId)
+      const result = await purchasesService.verifyPayment(purchaseId, { cheque_number })
       if (result.success) {
         return result.data
       }
-      return rejectWithValue(result.message || "Failed to verify payment")
+      return rejectWithValue({
+        message: result.message || "Failed to verify payment",
+        error_code: result.error_code,
+      })
     } catch (error) {
-      // Handle specific error codes
-      if (error.code === "PURCHASE_INVALID_STATUS") {
-        return rejectWithValue("This payment cannot be verified in its current status")
-      }
-      return rejectWithValue(error.message || "Failed to verify payment")
+      const data = error.response?.data
+      const message = data?.message || error.message || "Failed to verify payment"
+      const error_code = data?.error_code || error.error_code
+      return rejectWithValue({ message, error_code })
     }
   }
 )
@@ -61,13 +63,15 @@ export const rejectPayment = createAsyncThunk(
       if (result.success) {
         return result.data
       }
-      return rejectWithValue(result.message || "Failed to reject payment")
+      return rejectWithValue({
+        message: result.message || "Failed to reject payment",
+        error_code: result.error_code,
+      })
     } catch (error) {
-      // Handle specific error codes
-      if (error.code === "PURCHASE_INVALID_STATUS") {
-        return rejectWithValue("This payment cannot be rejected in its current status")
-      }
-      return rejectWithValue(error.message || "Failed to reject payment")
+      const data = error.response?.data
+      const message = data?.message || error.message || "Failed to reject payment"
+      const error_code = data?.error_code || error.error_code
+      return rejectWithValue({ message, error_code })
     }
   }
 )
