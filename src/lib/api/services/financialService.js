@@ -66,6 +66,61 @@ const mapStatusToApiParam = (status) => {
 }
 
 export const financialService = {
+  /**
+   * Super Admin – Investment list (GET /api/admin/investments)
+   * Paginated list with period filter: week | month | custom | overall
+   */
+  async getInvestmentsList(params = {}) {
+    const { period = "overall", from_date, to_date, page = 1, limit = 20 } = params
+
+    if (USE_MOCK_DATA) {
+      await delay(500)
+      let data = [...mockInvestments]
+      const total = data.length
+      const total_pages = Math.max(1, Math.ceil(total / limit))
+      const start = (page - 1) * limit
+      const investments = data.slice(start, start + limit).map((inv) => ({
+        id: inv.id,
+        investment_display_id: inv.id,
+        investor_id: inv.investorId,
+        investor: {
+          id: inv.investorId,
+          client_id: inv.investorId,
+          name: inv.investorName,
+          email: inv.investorEmail,
+          mobile: "",
+        },
+        plan_id: inv.planId ?? inv.productId,
+        plan: { id: inv.planId, name: inv.productName, slug: "" },
+        amount: inv.amount,
+        status: inv.status,
+        created_at: inv.date,
+        payment_verified_at: inv.date,
+        expected_returns: inv.expectedReturns,
+        next_payout: inv.nextPayout ? { receivable_amount: 0 } : null,
+        next_payout_date: inv.nextPayout,
+      }))
+      return {
+        investments,
+        pagination: { page, limit, total, total_pages },
+        filter: { period, from_date: from_date || null, to_date: to_date || null },
+      }
+    }
+
+    const apiParams = { period, page, limit }
+    if (period === "custom" && from_date && to_date) {
+      apiParams.from_date = from_date
+      apiParams.to_date = to_date
+    }
+    const response = await apiClient.get(endpoints.investments.list, { params: apiParams })
+    const data = response.data?.data ?? response.data
+    return {
+      investments: data?.investments ?? [],
+      pagination: data?.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 0 },
+      filter: data?.filter ?? { period, from_date: from_date || null, to_date: to_date || null },
+    }
+  },
+
   // Investments - uses GET /api/admin/purchases (all purchases, with optional status filter)
   async getInvestments(params = {}) {
     if (USE_MOCK_DATA) {

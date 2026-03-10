@@ -139,6 +139,11 @@ export const endpoints = {
     },
   },
 
+  // Super Admin – Investment list (all plan purchases with period filter)
+  investments: {
+    list: "/api/admin/investments",
+  },
+
   // Purchases (Payment Verification) - see docs/INVESTOR_MODULE_FRONTEND_GUIDE.md
   purchases: {
     list: "/api/admin/purchases",
