@@ -41,6 +41,7 @@ export const endpoints = {
   // Partner Management (Admin)
   partners: {
     list: "/api/admin/partners",
+    get: (partnerId) => `/api/admin/partners/${partnerId}`,
     changeRM: (partnerId) => `/api/admin/partners/${partnerId}/rm`,
   },
 

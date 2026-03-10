@@ -494,11 +494,28 @@ export const usersService = {
   async getPartner(id) {
     if (USE_MOCK_DATA) {
       await delay(300)
-      return mockPartners.find((p) => p.id === id) || null
+      const partner = mockPartners.find((p) => p.id === parseInt(id, 10))
+      if (!partner) return null
+      return {
+        partner,
+        rm: partner.rm ? { rm_id: partner.rm_id, rm_code: partner.rm?.rm_code, rm_name: partner.rm?.rm_name, rm_status: partner.rm?.rm_status } : null,
+        branch: partner.branch || null,
+        referral_summary: { referred_investors_count: partner.investorsCount ?? 0, total_invested_by_referred: 0 },
+        referred_investors: [],
+        commission_summary: null,
+        commission_distribution: [],
+        goals: [],
+        kyc: null,
+        kyc_documents: [],
+        documents: [],
+        nominee: null,
+        nominee_documents: [],
+        deed: null,
+      }
     }
 
-    // Endpoint TBD
-    return null
+    const response = await apiClient.get(endpoints.partners.get(id))
+    return response.data?.data ?? null
   },
 
   async changePartnerRM(partnerId, rmId) {
