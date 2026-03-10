@@ -198,7 +198,29 @@ export const financialService = {
     }
   },
 
-  // Payouts
+  /**
+   * Super Admin – Payout list (GET /api/admin/payouts)
+   * Paginated installments; requires month & year; optional slot (1–10, 11–20, 21–30), status.
+   */
+  async getPayoutsList(params = {}) {
+    const { month, year, slot, status, page = 1, limit = 20 } = params
+    if (month == null || year == null) {
+      throw new Error("Month and year are required")
+    }
+    const apiParams = { month, year, page, limit }
+    if (slot != null && slot !== "" && slot !== "all") apiParams.slot = slot
+    if (status != null && status !== "" && status !== "all") apiParams.status = status
+
+    const response = await apiClient.get(endpoints.payouts.list, { params: apiParams })
+    const data = response.data?.data ?? response.data
+    return {
+      payouts: data?.payouts ?? [],
+      pagination: data?.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 0 },
+      filter: data?.filter ?? { month, year, slot: slot || null, status: status || null },
+    }
+  },
+
+  // Payouts (legacy mock)
   async getPayouts(params = {}) {
     await delay(500)
     let data = [...mockPayouts]

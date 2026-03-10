@@ -197,13 +197,13 @@ const InvestmentsPage = () => {
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
-        accessorKey: "expected_returns",
-        header: "Expected returns",
+        accessorKey: "investment_return",
+        header: "Total received",
         cell: ({ row }) => {
-          const er = row.original.expected_returns
-          if (er == null) return "—"
-          if (typeof er === "object" && er.total != null) return formatCurrency(er.total)
-          if (typeof er === "number") return formatCurrency(er)
+          const ir = row.original.investment_return
+          if (ir == null) return "—"
+          if (ir.total_received_display) return <span className="tabular-nums font-medium">{ir.total_received_display}</span>
+          if (ir.total_received != null) return <span className="tabular-nums font-medium">{formatCurrency(ir.total_received)}</span>
           return "—"
         },
       },
@@ -214,16 +214,13 @@ const InvestmentsPage = () => {
           const np = row.original.next_payout
           if (!np) return <span className="text-muted-foreground">—</span>
           const amt = np.receivable_amount ?? np.amount
-          const label =
-            np.payout_date_from && np.payout_date_to
-              ? `${formatDateOnly(np.payout_date_from)} – ${formatDateOnly(np.payout_date_to)}`
-              : row.original.next_payout_date
-                ? formatDateOnly(row.original.next_payout_date)
-                : ""
+          const from = np.payout_date_from != null ? String(np.payout_date_from) : ""
+          const to = np.payout_date_to != null ? String(np.payout_date_to) : ""
+          const dateRange = from && to ? `${from} – ${to}` : from || to || (row.original.next_payout_date != null ? String(row.original.next_payout_date) : "")
           return (
             <div>
               <span className="tabular-nums font-medium">{formatCurrency(amt)}</span>
-              {label && <p className="text-xs text-muted-foreground">{label}</p>}
+              {dateRange && <p className="text-xs text-muted-foreground">{dateRange}</p>}
             </div>
           )
         },

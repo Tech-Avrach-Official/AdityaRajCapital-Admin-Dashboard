@@ -82,6 +82,11 @@ export const endpoints = {
     commission: (id) => `/api/financial/commissions/${id}`,
   },
 
+  // Super Admin – Payout list (installments)
+  payouts: {
+    list: "/api/admin/payouts",
+  },
+
   // KYC
   kyc: {
     list: "/api/kyc",

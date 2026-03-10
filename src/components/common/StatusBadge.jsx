@@ -16,6 +16,9 @@ const statusConfig = {
   paid: { variant: "success", label: "Paid" },
   due: { variant: "warning", label: "Due" },
   overdue: { variant: "destructive", label: "Overdue" },
+  delayed: { variant: "destructive", label: "Delayed" },
+  upcoming: { variant: "default", label: "Upcoming" },
+  current: { variant: "warning", label: "Current" },
 }
 
 const StatusBadge = ({ status, className, customLabel }) => {
