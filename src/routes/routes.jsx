@@ -5,6 +5,7 @@ import LoginPage from "../admin/pages/auth/LoginPage"
 import Dashboard from "../admin/pages/dashboard/Dashboard"
 import RMsPage from "../admin/pages/users/rms/RMsPage"
 import PartnersPage from "../admin/pages/users/partners/PartnersPage"
+import PartnerDetailPage from "../admin/pages/users/partners/PartnerDetailPage"
 import InvestorsPage from "../admin/pages/users/investors/InvestorsPage"
 import InvestorDetailPage from "../admin/pages/users/investors/InvestorDetailPage"
 import InvestmentDetailPage from "../admin/pages/users/investors/InvestmentDetailPage"
@@ -51,6 +52,7 @@ const AllRoutes = () => {
         {/* User Management */}
         <Route path="users/rms" element={<RMsPage />} />
         <Route path="users/partners" element={<PartnersPage />} />
+        <Route path="users/partners/:id" element={<PartnerDetailPage />} />
         <Route path="users/investors/:investorId/investments/:investmentId" element={<InvestmentDetailPage />} />
         <Route path="users/investors/:id" element={<InvestorDetailPage />} />
         <Route path="users/investors" element={<InvestorsPage />} />

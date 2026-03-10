@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react"
+import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
-import { toast } from "react-hot-toast"
-import { MoreHorizontal, Eye, Edit, UserCog } from "lucide-react"
+import { Eye } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
 import StatusBadge from "@/components/common/StatusBadge"
-import ChangeRMModal from "./components/ChangeRMModal"
 import {
   Table,
   TableBody,
@@ -15,12 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePartners } from "@/hooks"
 import { hierarchyService } from "@/lib/api/services"
@@ -37,9 +31,6 @@ const PartnersPage = () => {
     resetFilters,
   } = usePartners()
 
-  // Change RM Modal state
-  const [changeRMModalOpen, setChangeRMModalOpen] = useState(false)
-  const [selectedPartnerForRM, setSelectedPartnerForRM] = useState(null)
   const [branches, setBranches] = useState([])
 
   // Load branches on mount
@@ -80,18 +71,6 @@ const PartnersPage = () => {
     loadPartners()
   }
 
-  // Open Change RM modal
-  const handleChangeRM = (partner) => {
-    setSelectedPartnerForRM(partner)
-    setChangeRMModalOpen(true)
-  }
-
-  // Handle successful RM change
-  const handleRMChangeSuccess = () => {
-    loadPartners() // Refresh the list
-    toast.success("Partner RM changed successfully")
-  }
-
   // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -101,134 +80,140 @@ const PartnersPage = () => {
     }).format(amount || 0)
   }
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—"
+    try {
+      return new Date(dateStr).toLocaleDateString("en-IN", {
+        dateStyle: "medium",
+      })
+    } catch {
+      return "—"
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
+        accessorKey: "partner_referral_code",
+        header: "Partner Referral Code",
+        cell: ({ row }) => (
+          <span className="font-mono text-sm">
+            {row.original.partner_referral_code ?? row.original.referral_code ?? "—"}
+          </span>
+        ),
+      },
+      {
         accessorKey: "name",
         header: "Name",
-        cell: ({ row }) => (
-          <button className="text-primary hover:underline font-medium text-left">
-            {row.original.name}
-          </button>
-        ),
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-        cell: ({ row }) => (
-          <span className="text-sm">{row.original.email}</span>
-        ),
-      },
-      {
-        accessorKey: "mobile",
-        header: "Mobile",
-        cell: ({ row }) => (
-          <span className="text-sm">{row.original.mobile}</span>
-        ),
-      },
-      {
-        accessorKey: "id",
-        header: "Partner ID",
         cell: ({ row }) => {
-          // Use partnerId if available, otherwise format the id
-          const partnerId = row.original.partnerId || row.original.partner_id
-          if (partnerId) {
-            return <span className="font-mono text-sm">{partnerId}</span>
-          }
-          // Format numeric id as P-{id}
-          const id = row.original.id
+          const p = row.original
+          const name = p.name ?? "—"
+          const img = p.profile_image
+          const initial = name !== "—" ? name.charAt(0).toUpperCase() : "?"
           return (
-            <span className="font-mono text-sm">
-              {id ? `P-${String(id).padStart(4, "0")}` : "-"}
+            <Link
+              to={`/admin/users/partners/${p.id}`}
+              className="flex items-center gap-3 text-primary hover:underline font-medium text-left"
+            >
+              <Avatar className="h-9 w-9 shrink-0">
+                {img && <AvatarImage src={img} alt={name} />}
+                <AvatarFallback className="text-xs">{initial}</AvatarFallback>
+              </Avatar>
+              <span>{name}</span>
+            </Link>
+          )
+        },
+      },
+      {
+        accessorKey: "branch",
+        header: "Branch",
+        cell: ({ row }) => {
+          const branch = row.original.branch
+          if (!branch) return <span className="text-sm text-muted-foreground">—</span>
+          const label = branch.name ?? branch.branch_name
+          return (
+            <span className="text-sm text-muted-foreground">
+              {label ?? "—"}
             </span>
           )
         },
       },
       {
         accessorKey: "rm",
-        header: "RM",
+        header: "Referral RM",
         cell: ({ row }) => {
-          const partner = row.original
-          const rmName = partner.rm?.rm_name || partner.rmName
-          const rmCode = partner.rm?.rm_code || ""
-
+          const rmName = row.original.rm?.rm_name ?? row.original.rmName
           if (rmName) {
-            return (
-              <div>
-                <p className="font-medium text-sm">{rmName}</p>
-                {rmCode && (
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {rmCode}
-                  </p>
-                )}
-              </div>
-            )
+            return <span className="text-sm font-medium">{rmName}</span>
           }
           return (
-            <span className="text-muted-foreground italic text-sm">
-              Unassigned
-            </span>
+            <span className="text-muted-foreground italic text-sm">Unassigned</span>
           )
         },
       },
       {
-        accessorKey: "branch_name",
-        header: "Branch",
+        accessorKey: "kyc_status",
+        header: "KYC Status",
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
-            {row.original.branch_name ?? row.original.rm?.branch_name ?? "—"}
-          </span>
+          <StatusBadge
+            status={row.original.kyc_status}
+            customLabel={
+              row.original.kyc_status
+                ? row.original.kyc_status.charAt(0).toUpperCase() +
+                  row.original.kyc_status.slice(1)
+                : "—"
+            }
+          />
         ),
       },
       {
-        accessorKey: "investorsCount",
-        header: "Investors",
+        accessorKey: "referral_summary",
+        header: "Total Investors",
         cell: ({ row }) => (
           <span className="text-sm">
-            {row.original.investorsCount ?? 0}
+            {row.original.referral_summary?.referred_investors_count ??
+              row.original.investorsCount ??
+              0}
           </span>
         ),
       },
       {
-        accessorKey: "totalCommission",
+        accessorKey: "total_commission",
         header: "Total Commission",
         cell: ({ row }) => (
           <span className="text-sm font-medium">
-            {formatCurrency(row.original.totalCommission)}
+            {formatCurrency(
+              row.original.total_commission ?? row.original.totalCommission
+            )}
           </span>
         ),
       },
       {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        accessorKey: "created_at",
+        header: "Created At",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDate(row.original.created_at ?? row.original.createdAt)}
+          </span>
+        ),
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleChangeRM(row.original)}>
-                <UserCog className="mr-2 h-4 w-4" />
-                Change RM
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+        cell: ({ row }) => {
+          const id = row.original.id
+          return (
+            <Button variant="ghost" size="sm" asChild>
+              <Link
+                to={`/admin/users/partners/${id}`}
+                className="inline-flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View
+              </Link>
+            </Button>
+          )
+        },
       },
     ],
     []
@@ -338,17 +323,6 @@ const PartnersPage = () => {
           </Table>
         </div>
       )}
-
-      {/* Change RM Modal */}
-      <ChangeRMModal
-        isOpen={changeRMModalOpen}
-        onClose={() => {
-          setChangeRMModalOpen(false)
-          setSelectedPartnerForRM(null)
-        }}
-        partner={selectedPartnerForRM}
-        onSuccess={handleRMChangeSuccess}
-      />
     </div>
   )
 }

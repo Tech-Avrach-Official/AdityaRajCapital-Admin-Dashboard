@@ -6,6 +6,7 @@ const statusConfig = {
   active: { variant: "success", label: "Active" },
   inactive: { variant: "secondary", label: "Inactive" },
   pending: { variant: "warning", label: "Pending" },
+  uploaded: { variant: "default", label: "Uploaded" },
   verified: { variant: "success", label: "Verified" },
   rejected: { variant: "destructive", label: "Rejected" },
   completed: { variant: "default", label: "Completed" },
