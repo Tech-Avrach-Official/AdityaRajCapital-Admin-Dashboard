@@ -29,12 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usersService, purchasesService } from "@/lib/api/services"
 import NomineeDocumentsModal from "./components/NomineeDocumentsModal"
 import PaymentProofModal from "@/admin/pages/financial/payment-verification/components/PaymentProofModal"
-import { cn } from "@/lib/utils"
+import { cn, getProfileImageUrl } from "@/lib/utils"
 
 const formatDate = (d) =>
   d
@@ -239,7 +239,18 @@ const InvestmentDetailPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-border/40 bg-background/60 px-4 py-3 backdrop-blur-sm max-w-md">
-              <User className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <Avatar className="h-10 w-10 shrink-0 rounded-lg border border-border/60">
+                {investor && getProfileImageUrl(investor.profile_image) && (
+                  <AvatarImage
+                    src={getProfileImageUrl(investor.profile_image)}
+                    alt={displayName}
+                    className="object-cover"
+                  />
+                )}
+                <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                  {getInitials(displayName)}
+                </AvatarFallback>
+              </Avatar>
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">Investor</p>
                 <Link

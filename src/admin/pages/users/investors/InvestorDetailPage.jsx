@@ -30,11 +30,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { usersService, purchasesService } from "@/lib/api/services"
 import NomineeDocumentsModal from "./components/NomineeDocumentsModal"
 import KYCDocumentsModal from "./components/KYCDocumentsModal"
-import { cn } from "@/lib/utils"
+import { cn, getProfileImageUrl } from "@/lib/utils"
 
 const formatDate = (d) =>
   d
@@ -216,6 +216,13 @@ const InvestorDetailPage = () => {
             </Button>
             <div className="flex items-center gap-5">
               <Avatar className="h-20 w-20 rounded-2xl border-2 border-primary/20 bg-primary/10 text-primary text-2xl font-semibold">
+                {getProfileImageUrl(investor.profile_image) && (
+                  <AvatarImage
+                    src={getProfileImageUrl(investor.profile_image)}
+                    alt={investor.name}
+                    className="object-cover"
+                  />
+                )}
                 <AvatarFallback>{getInitials(investor.name)}</AvatarFallback>
               </Avatar>
               <div className="space-y-1">

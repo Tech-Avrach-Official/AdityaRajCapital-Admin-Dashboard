@@ -29,8 +29,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { usersService, hierarchyService } from "@/lib/api/services"
-import { cn } from "@/lib/utils"
+import { cn, getProfileImageUrl } from "@/lib/utils"
+
+const getInitials = (name) =>
+  (name || "?")
+    .split(" ")
+    .map((s) => s[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
 
 const formatINR = (amount) => {
   if (amount == null) return "—"
@@ -167,19 +176,29 @@ const InvestorsPage = () => {
             )}
           </button>
         ),
-        cell: ({ row }) => (
-          <button
-            type="button"
-            className="text-left font-medium text-primary hover:underline"
-            onClick={() =>
-              navigate(`/admin/users/investors/${row.original.id}`, {
-                state: { investor: row.original },
-              })
-            }
-          >
-            {row.original.name || "—"}
-          </button>
-        ),
+        cell: ({ row }) => {
+          const inv = row.original
+          const profileSrc = getProfileImageUrl(inv.profile_image)
+          return (
+            <button
+              type="button"
+              className="flex items-center gap-3 text-left w-full font-medium text-primary hover:underline"
+              onClick={() =>
+                navigate(`/admin/users/investors/${inv.id}`, {
+                  state: { investor: inv },
+                })
+              }
+            >
+              <Avatar className="h-9 w-9 shrink-0 rounded-lg border border-border/60">
+                {profileSrc && <AvatarImage src={profileSrc} alt={inv.name} className="object-cover" />}
+                <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-semibold">
+                  {getInitials(inv.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{inv.name || "—"}</span>
+            </button>
+          )
+        },
       },
       {
         accessorKey: "branch_name",
