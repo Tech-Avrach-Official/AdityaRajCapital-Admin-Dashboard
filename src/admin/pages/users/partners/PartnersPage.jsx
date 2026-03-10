@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
-import { Eye } from "lucide-react"
+import { Eye, Download } from "lucide-react"
+import { toast } from "react-hot-toast"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
 import StatusBadge from "@/components/common/StatusBadge"
@@ -69,6 +70,68 @@ const PartnersPage = () => {
   const handleClearFilters = () => {
     resetFilters()
     loadPartners()
+  }
+
+  const handleExport = () => {
+    const data = filters.search ? filteredPartners : partners
+    if (!data || data.length === 0) {
+      toast.error("No partners to export")
+      return
+    }
+    const headers = [
+      "Partner Referral Code",
+      "Name",
+      "Email",
+      "Mobile",
+      "Branch",
+      "Referral RM",
+      "KYC Status",
+      "Total Investors",
+      "Total Commission",
+      "Created At",
+    ]
+    const rows = data.map((p) => {
+      const branchName = p.branch?.name ?? p.branch_name ?? ""
+      const rmName = p.rm?.rm_name ?? p.rmName ?? ""
+      const kycStatus = p.kyc_status ?? ""
+      const totalInvestors =
+        p.referral_summary?.referred_investors_count ?? p.investorsCount ?? 0
+      const totalCommission = p.total_commission ?? p.totalCommission ?? 0
+      const createdAt = p.created_at ?? p.createdAt ?? ""
+      const createdFormatted = createdAt
+        ? new Date(createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })
+        : ""
+      const commissionFormatted = formatCurrency(totalCommission)
+      return [
+        p.partner_referral_code ?? p.referral_code ?? "",
+        p.name ?? "",
+        p.email ?? "",
+        p.mobile ?? "",
+        branchName,
+        rmName,
+        kycStatus,
+        String(totalInvestors),
+        commissionFormatted,
+        createdFormatted,
+      ]
+    })
+    const escapeCsvCell = (val) => {
+      const s = String(val ?? "")
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
+    const csv = "\uFEFF" + csvRows.join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `partners-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Partners exported successfully")
   }
 
   // Format currency
@@ -261,7 +324,17 @@ const PartnersPage = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Partners" />
+      <PageHeader
+        title="Partners"
+        action="Export"
+        actionLabel={
+          <>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </>
+        }
+        onActionClick={handleExport}
+      />
 
       <FilterBar
         searchValue={filters.search}
