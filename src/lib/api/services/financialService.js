@@ -262,7 +262,31 @@ export const financialService = {
     }
   },
 
-  // Commissions
+  /**
+   * Super Admin – Commission list (GET /api/admin/commissions)
+   * Paginated; requires month & year; optional slot, type (partner/rm), status, commission_id.
+   */
+  async getCommissionsList(params = {}) {
+    const { month, year, slot, type, status, commission_id, page = 1, limit = 20 } = params
+    if (month == null || year == null) {
+      throw new Error("Month and year are required")
+    }
+    const apiParams = { month, year, page, limit }
+    if (slot != null && slot !== "" && slot !== "all") apiParams.slot = slot
+    if (type != null && type !== "" && type !== "all") apiParams.type = type
+    if (status != null && status !== "" && status !== "all") apiParams.status = status
+    if (commission_id != null && commission_id !== "") apiParams.commission_id = commission_id
+
+    const response = await apiClient.get(endpoints.commissions.list, { params: apiParams })
+    const data = response.data?.data ?? response.data
+    return {
+      commissions: data?.commissions ?? [],
+      pagination: data?.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 0 },
+      filter: data?.filter ?? { month, year, slot: slot || null, type: type || null, status: status || null, commission_id: commission_id || null },
+    }
+  },
+
+  // Commissions (legacy mock)
   async getCommissions(params = {}) {
     await delay(500)
     let data = [...mockCommissions]
