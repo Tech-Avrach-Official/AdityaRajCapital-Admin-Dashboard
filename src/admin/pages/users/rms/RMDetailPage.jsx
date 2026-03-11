@@ -672,29 +672,51 @@ const RMDetailPage = () => {
               </div>
               {(rm.aadhaar_front_image_url || rm.pan_image_url) && (
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Documents</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Documents (click to enlarge)</h4>
                   <div className="flex flex-wrap gap-3">
                     {rm.aadhaar_front_image_url && (
-                      <a
-                        href={rm.aadhaar_front_image_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setImagePreview({
+                            open: true,
+                            url: rm.aadhaar_front_image_url,
+                            title: "Aadhaar (front)",
+                          })
+                        }
+                        className="rounded-lg border border-border overflow-hidden bg-muted hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-opacity"
                       >
-                        <FileText className="h-4 w-4" />
-                        Aadhaar (front)
-                      </a>
+                        <img
+                          src={rm.aadhaar_front_image_url}
+                          alt="Aadhaar (front)"
+                          className="h-16 w-16 object-cover"
+                          onError={(e) => {
+                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E"
+                          }}
+                        />
+                      </button>
                     )}
                     {rm.pan_image_url && (
-                      <a
-                        href={rm.pan_image_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setImagePreview({
+                            open: true,
+                            url: rm.pan_image_url,
+                            title: "PAN",
+                          })
+                        }
+                        className="rounded-lg border border-border overflow-hidden bg-muted hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-opacity"
                       >
-                        <FileText className="h-4 w-4" />
-                        PAN
-                      </a>
+                        <img
+                          src={rm.pan_image_url}
+                          alt="PAN"
+                          className="h-16 w-16 object-cover"
+                          onError={(e) => {
+                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E"
+                          }}
+                        />
+                      </button>
                     )}
                   </div>
                 </div>
