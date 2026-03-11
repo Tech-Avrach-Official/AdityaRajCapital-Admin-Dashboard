@@ -11,6 +11,7 @@ import {
   Power,
   PowerOff,
   Loader2,
+  Download,
 } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
@@ -106,6 +107,53 @@ const PlansListPage = () => {
     } finally {
       setTogglingId(null)
     }
+  }
+
+  const handleExport = () => {
+    if (!plans.length) {
+      toast.error("No plans to export")
+      return
+    }
+    const escapeCsvCell = (val) => {
+      const s = String(val ?? "")
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const headers = [
+      "Order",
+      "Plan name",
+      "Slug",
+      "Min investment",
+      "Partner %",
+      "Status",
+    ]
+    const rows = plans.map((p) => {
+      const min = p.investment_details?.min_investment
+      const minStr = min != null ? formatCurrency(min) : "—"
+      const pct = p.partner_commission?.percent
+      const pctStr = pct != null ? `${pct}%` : "—"
+      const statusStr = p.is_active ? "Active" : "Inactive"
+      return [
+        String(p.display_order ?? 0),
+        p.name ?? "",
+        p.slug ?? "",
+        minStr,
+        pctStr,
+        statusStr,
+      ]
+    })
+    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
+    const csv = "\uFEFF" + csvRows.join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `plans-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Plans exported successfully")
   }
 
   const columns = useMemo(
@@ -257,6 +305,19 @@ const PlansListPage = () => {
         }
         onActionClick={() => navigate("/admin/plans/new")}
       />
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="default"
+          className="gap-2"
+          onClick={handleExport}
+          disabled={!plans.length}
+        >
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+      </div>
 
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">

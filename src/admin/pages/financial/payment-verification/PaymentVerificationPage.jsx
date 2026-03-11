@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
-import { Eye, CheckCircle, XCircle, CreditCard, IndianRupee, Loader2 } from "lucide-react"
+import { Eye, CheckCircle, XCircle, CreditCard, IndianRupee, Loader2, Download } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
 import MetricCard from "@/components/common/MetricCard"
@@ -255,6 +255,50 @@ const PaymentVerificationPage = () => {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  const handleExport = () => {
+    if (!filteredPurchases?.length) {
+      toast.error("No payments to export")
+      return
+    }
+    const escapeCsvCell = (val) => {
+      const s = String(val ?? "")
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const headers = [
+      "Purchase ID",
+      "Investor ID",
+      "Investor Name",
+      "Investor Email",
+      "Plan Name",
+      "Amount",
+      "Uploaded At",
+    ]
+    const rows = filteredPurchases.map((p) => [
+      String(p.id ?? ""),
+      String(p.investor_id ?? ""),
+      p.investor_name ?? "",
+      p.investor_email ?? "",
+      p.plan_name ?? "",
+      formatINR(p.amount),
+      p.payment_proof_uploaded_at
+        ? format(new Date(p.payment_proof_uploaded_at), "yyyy-MM-dd HH:mm")
+        : "",
+    ])
+    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
+    const csv = "\uFEFF" + csvRows.join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `payment-verification-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Payments exported successfully")
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -280,12 +324,24 @@ const PaymentVerificationPage = () => {
       </div>
 
       {/* Filter Bar */}
-      <FilterBar
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        searchPlaceholder="Search by ID, investor, plan, or amount..."
-        onClearFilters={() => setSearchValue("")}
-      />
+      <div className="flex flex-wrap items-center gap-4 justify-between">
+        <FilterBar
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          searchPlaceholder="Search by ID, investor, plan, or amount..."
+          onClearFilters={() => setSearchValue("")}
+        />
+        <Button
+          variant="outline"
+          size="default"
+          className="gap-2 shrink-0"
+          onClick={handleExport}
+          disabled={!filteredPurchases?.length}
+        >
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+      </div>
 
       {/* Table */}
       {loading ? (

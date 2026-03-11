@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Upload } from "lucide-react"
+import { ChevronLeft, ChevronRight, Upload, Download } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
@@ -128,6 +128,66 @@ const CommissionsPage = () => {
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > pagination.total_pages) return
     loadCommissions(newPage)
+  }
+
+  const handleExport = () => {
+    if (!commissions.length) {
+      toast.error("No commissions to export")
+      return
+    }
+    const escapeCsvCell = (val) => {
+      const s = String(val ?? "")
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const headers = [
+      "Commission ID",
+      "Type",
+      "Payee",
+      "Investment ID",
+      "Amount",
+      "TDS %",
+      "Receivable",
+      "Due window",
+      "Payment timing",
+      "Branch",
+      "Bank (holder)",
+      "Bank name",
+      "Account number",
+    ]
+    const rows = commissions.map((c) => {
+      const b = c.branch
+      const branchName = b ? (b.name ?? "") : ""
+      const bank = c.bank_account
+      const tdsPct = c.tds_percent != null ? `${c.tds_percent}%` : ""
+      return [
+        String(c.commission_id ?? c.id ?? ""),
+        c.type ?? "",
+        c.payee_name ?? "",
+        c.investment_display_id ?? c.investment_id ?? "",
+        formatCurrency(c.amount),
+        tdsPct,
+        formatCurrency(c.receivable_amount),
+        c.due_window_label ?? "",
+        c.payment_timing ?? c.status ?? "",
+        branchName,
+        bank?.account_holder_name ?? "",
+        bank?.bank_name ?? "",
+        bank?.account_number ?? "",
+      ]
+    })
+    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
+    const csv = "\uFEFF" + csvRows.join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `commissions-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Commissions exported successfully")
   }
 
   const columns = useMemo(
@@ -400,7 +460,13 @@ const CommissionsPage = () => {
             </div>
           </div>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">Showing: {filterSummary}</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Showing: {filterSummary}</p>
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport} disabled={!commissions.length}>
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
       {loading ? (

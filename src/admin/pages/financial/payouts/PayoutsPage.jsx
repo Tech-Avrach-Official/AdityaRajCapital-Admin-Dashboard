@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
-import { Upload, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { Upload, Eye, ChevronLeft, ChevronRight, Download } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
@@ -110,6 +110,62 @@ const PayoutsPage = () => {
     loadPayouts(newPage)
   }
 
+  const handleExport = () => {
+    if (!payouts.length) {
+      toast.error("No payouts to export")
+      return
+    }
+    const escapeCsvCell = (val) => {
+      const s = String(val ?? "")
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const headers = [
+      "Investment ID",
+      "Installment #",
+      "Investor",
+      "Branch",
+      "Gross amount",
+      "Receivable",
+      "Payout window",
+      "Payment timing",
+      "Bank (holder)",
+      "Bank name",
+      "Account number",
+    ]
+    const rows = payouts.map((p) => {
+      const b = p.branch
+      const branchName = b ? (b.name ?? "") : ""
+      const bank = p.bank_account
+      const windowLabel = p.payout_window_label ?? (p.payout_date_from != null && p.payout_date_to != null ? `${p.payout_date_from}–${p.payout_date_to}` : "")
+      const timing = p.payment_timing ?? p.status ?? ""
+      return [
+        p.investment_display_id ?? p.investment_id ?? "",
+        String(p.installment_number ?? ""),
+        p.investor_name ?? "",
+        branchName,
+        formatCurrency(p.gross_amount),
+        formatCurrency(p.receivable_amount),
+        windowLabel,
+        timing,
+        bank?.account_holder_name ?? "",
+        bank?.bank_name ?? "",
+        bank?.account_number ?? "",
+      ]
+    })
+    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
+    const csv = "\uFEFF" + csvRows.join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `payouts-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Payouts exported successfully")
+  }
 
   const columns = useMemo(
     () => [
@@ -342,7 +398,13 @@ const PayoutsPage = () => {
             </Select>
           </div>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">Showing: {filterSummary}</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Showing: {filterSummary}</p>
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport} disabled={!payouts.length}>
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
       {loading ? (

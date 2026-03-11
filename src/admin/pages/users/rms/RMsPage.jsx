@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
+import { format } from "date-fns"
+import { Download } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import RMsTable from "./components/RMsTable"
 import CreateRMModal from "./components/CreateRMModal"
@@ -119,6 +122,59 @@ const RMsPage = () => {
     loadRMs()
   }
 
+  const handleExport = () => {
+    const data = displayData
+    if (!data || data.length === 0) {
+      toast.error("No RMs to export")
+      return
+    }
+    const escapeCsvCell = (val) => {
+      const s = String(val ?? "")
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const headers = [
+      "RM Code",
+      "Name",
+      "Email",
+      "Mobile",
+      "Branch",
+      "State",
+      "Nation",
+      "Partners",
+      "Status",
+      "Created Date",
+    ]
+    const rows = data.map((r) => {
+      const created = r.created_at || r.createdDate
+      const createdStr = created ? (() => { try { return format(new Date(created), "dd MMM yyyy") } catch { return created } })() : ""
+      return [
+        r.rm_code ?? r.referralCode ?? "",
+        r.name ?? "",
+        r.email ?? "",
+        r.phone_number ?? r.mobile ?? "",
+        r.branch_name ?? "—",
+        r.state_name ?? "—",
+        r.nation_name ?? "—",
+        String(r.partner_count ?? r.partnersCount ?? 0),
+        r.status ?? "",
+        createdStr,
+      ]
+    })
+    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
+    const csv = "\uFEFF" + csvRows.join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `rms-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("RMs exported successfully")
+  }
+
   // Success handlers - refresh the list after operations
   const handleCreateSuccess = () => {
     loadRMs()
@@ -233,14 +289,20 @@ const RMsPage = () => {
         onActionClick={() => setCreateModalOpen(true)}
       />
 
-      <FilterBar
-        searchValue={filters.search}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Search by name, email, mobile, RM code..."
-        filters={filterConfig}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-      />
+      <div className="flex flex-wrap items-center gap-4 justify-between">
+        <FilterBar
+          searchValue={filters.search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Search by name, email, mobile, RM code..."
+          filters={filterConfig}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+        />
+        <Button variant="outline" size="default" className="gap-2 shrink-0" onClick={handleExport} disabled={!displayData?.length}>
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+      </div>
 
       {loading ? (
         <div className="rounded-md border p-4">
