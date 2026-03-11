@@ -19,7 +19,6 @@ const Navbar = () => {
        
           
           <a href="/contact" className="text-white hover:text-green-300 font-medium">Contact Us</a>
-          <a href="/admin" className="text-white hover:text-green-300 font-medium">Admin</a>
         </div>
         
         {/* CTA Button and Social Icons */}

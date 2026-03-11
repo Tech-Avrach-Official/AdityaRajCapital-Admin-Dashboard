@@ -1,13 +1,10 @@
 // import { Home } from "lucide-react"
 import { BrowserRouter } from "react-router-dom"
-import AllRoutes from "./routes/routes"
+import AllRoutes from "./global/router/AppRouter"
 import "./App.css";
 import { Toaster } from "react-hot-toast";
 // import TeezinesLoader from "./component/TeezinesLoader";
 import ScrollToTop from "./components/common/scrollToTop";
-import { useEffect, useState } from "react";
-
-
 const App = () => {
 
   return (
