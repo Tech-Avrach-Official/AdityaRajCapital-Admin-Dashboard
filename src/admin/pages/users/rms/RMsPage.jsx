@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
 import { Download } from "lucide-react"
@@ -7,15 +8,14 @@ import FilterBar from "@/components/common/FilterBar"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import RMsTable from "./components/RMsTable"
-import CreateRMModal from "./components/CreateRMModal"
 import EditRMModal from "./components/EditRMModal"
-import RMDetailsModal from "./components/RMDetailsModal"
 import AssignPartnersModal from "./components/AssignPartnersModal"
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal"
 import { useRMs } from "@/hooks"
 import { hierarchyService } from "@/lib/api/services"
 
 const RMsPage = () => {
+  const navigate = useNavigate()
   // Redux state and actions
   const {
     rms,
@@ -31,9 +31,7 @@ const RMsPage = () => {
   } = useRMs()
 
   // Local state for modal visibility
-  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   // Hierarchy options for filters
@@ -176,11 +174,6 @@ const RMsPage = () => {
   }
 
   // Success handlers - refresh the list after operations
-  const handleCreateSuccess = () => {
-    loadRMs()
-    toast.success("RM created successfully")
-  }
-
   const handleEditSuccess = () => {
     loadRMs()
     deselectRM()
@@ -202,10 +195,9 @@ const RMsPage = () => {
     }
   }
 
-  // Modal handlers
+  // Navigate to RM detail page
   const handleViewRM = (rm) => {
-    selectRM(rm)
-    setDetailsModalOpen(true)
+    if (rm?.id) navigate(`/admin/users/rms/${rm.id}`)
   }
 
   const handleEditRM = (rm) => {
@@ -286,7 +278,7 @@ const RMsPage = () => {
       <PageHeader
         title="Relationship Managers"
         action="Create RM"
-        onActionClick={() => setCreateModalOpen(true)}
+        actionHref="/admin/users/rms/new"
       />
 
       <div className="flex flex-wrap items-center gap-4 justify-between">
@@ -319,26 +311,12 @@ const RMsPage = () => {
         />
       )}
 
-      {/* Create RM Modal */}
-      <CreateRMModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-        onSuccess={handleCreateSuccess}
-      />
-
       {/* Edit RM Modal */}
       <EditRMModal
         open={editModalOpen}
         onOpenChange={handleCloseModal(setEditModalOpen)}
         rm={selectedRM}
         onSuccess={handleEditSuccess}
-      />
-
-      {/* RM Details Modal */}
-      <RMDetailsModal
-        open={detailsModalOpen}
-        onOpenChange={handleCloseModal(setDetailsModalOpen)}
-        rm={selectedRM}
       />
 
       {/* Assign Partners Modal */}

@@ -58,13 +58,22 @@ export const selectFilteredPartners = createSelector(
       )
     }
     
+    if (filters.kycStatus && filters.kycStatus !== "all") {
+      const kyc = filters.kycStatus.toLowerCase()
+      filtered = filtered.filter(
+        (p) => (p.kyc_status || "").toLowerCase() === kyc
+      )
+    }
+    
     if (filters.search) {
       const search = filters.search.toLowerCase()
       filtered = filtered.filter(
         (p) =>
           p.name?.toLowerCase().includes(search) ||
           p.email?.toLowerCase().includes(search) ||
-          p.partnerId?.toLowerCase().includes(search)
+          (p.partner_referral_code || p.referral_code || p.partnerId || "")
+            .toLowerCase()
+            .includes(search)
       )
     }
     

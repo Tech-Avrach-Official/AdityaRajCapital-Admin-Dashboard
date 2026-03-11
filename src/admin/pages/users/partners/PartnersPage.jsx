@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
-import { Eye, Download } from "lucide-react"
+import { Eye, Download, Search, X } from "lucide-react"
 import { toast } from "react-hot-toast"
 import PageHeader from "@/components/common/PageHeader"
-import FilterBar from "@/components/common/FilterBar"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
   Table,
@@ -15,10 +14,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePartners } from "@/hooks"
-import { hierarchyService } from "@/lib/api/services"
+import { hierarchyService, usersService } from "@/lib/api/services"
 
 const PartnersPage = () => {
   // Redux state and actions
@@ -33,10 +34,25 @@ const PartnersPage = () => {
   } = usePartners()
 
   const [branches, setBranches] = useState([])
+  const [rms, setRms] = useState([])
+  const [createdFrom, setCreatedFrom] = useState("")
+  const [createdTo, setCreatedTo] = useState("")
+  const [minInvestors, setMinInvestors] = useState("")
+  const [maxInvestors, setMaxInvestors] = useState("")
+  const [minCommission, setMinCommission] = useState("")
+  const [maxCommission, setMaxCommission] = useState("")
 
   // Load branches on mount
   useEffect(() => {
     hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? []))
+  }, [])
+
+  // Load RMs for Referral RM filter
+  useEffect(() => {
+    usersService
+      .getRMs({ limit: 500 })
+      .then((res) => setRms(res?.data ?? []))
+      .catch(() => setRms([]))
   }, [])
 
   // Load partners on mount
@@ -50,30 +66,34 @@ const PartnersPage = () => {
   }
 
   const handleFilterChange = (key, value) => {
-    if (key === "status") {
-      updateFilters({ status: value })
-      loadPartners({
-        status: value !== "all" ? value : undefined,
-        branch_id: filters.branch_id || undefined,
-      })
-      return
-    }
-    if (key === "branch_id") {
-      updateFilters({ branch_id: value })
-      loadPartners({
-        status: filters.status !== "all" ? filters.status : undefined,
-        branch_id: value || undefined,
-      })
-    }
+    const emptyVal = key === "branch_id" ? "" : key === "rmId" ? null : "all"
+    const val = value === "all" || value === "" ? emptyVal : value
+    updateFilters({ [key]: val })
+    const branchId = key === "branch_id" ? (value || undefined) : (filters.branch_id || undefined)
+    const status = key === "status" ? (value !== "all" ? value : undefined) : (filters.status !== "all" ? filters.status : undefined)
+    const kycStatus = key === "kycStatus" ? (value !== "all" ? value : undefined) : (filters.kycStatus !== "all" ? filters.kycStatus : undefined)
+    const rmId = key === "rmId" ? (value && value !== "all" ? Number(value) : undefined) : (filters.rmId != null && filters.rmId !== "" ? Number(filters.rmId) : undefined)
+    loadPartners({
+      branch_id: branchId,
+      status,
+      kycStatus,
+      rmId,
+    })
   }
 
   const handleClearFilters = () => {
     resetFilters()
+    setCreatedFrom("")
+    setCreatedTo("")
+    setMinInvestors("")
+    setMaxInvestors("")
+    setMinCommission("")
+    setMaxCommission("")
     loadPartners()
   }
 
   const handleExport = () => {
-    const data = filters.search ? filteredPartners : partners
+    const data = displayData
     if (!data || data.length === 0) {
       toast.error("No partners to export")
       return
@@ -282,36 +302,64 @@ const PartnersPage = () => {
     []
   )
 
-  // Use filtered partners for display
-  const displayData = filters.search ? filteredPartners : partners
+  // Apply client-side filters (date range, min/max investors, min/max commission)
+  const displayData = useMemo(() => {
+    const base = filteredPartners
+    let list = [...base]
+    if (createdFrom) {
+      const from = new Date(createdFrom)
+      from.setHours(0, 0, 0, 0)
+      list = list.filter((p) => {
+        const d = p.created_at ?? p.createdAt
+        if (!d) return false
+        return new Date(d) >= from
+      })
+    }
+    if (createdTo) {
+      const to = new Date(createdTo)
+      to.setHours(23, 59, 59, 999)
+      list = list.filter((p) => {
+        const d = p.created_at ?? p.createdAt
+        if (!d) return false
+        return new Date(d) <= to
+      })
+    }
+    const minInv = minInvestors.trim() ? parseInt(minInvestors.replace(/,/g, ""), 10) : null
+    if (minInv != null && !Number.isNaN(minInv)) {
+      list = list.filter((p) => {
+        const n = p.referral_summary?.referred_investors_count ?? p.investorsCount ?? 0
+        return Number(n) >= minInv
+      })
+    }
+    const maxInv = maxInvestors.trim() ? parseInt(maxInvestors.replace(/,/g, ""), 10) : null
+    if (maxInv != null && !Number.isNaN(maxInv)) {
+      list = list.filter((p) => {
+        const n = p.referral_summary?.referred_investors_count ?? p.investorsCount ?? 0
+        return Number(n) <= maxInv
+      })
+    }
+    const minComm = minCommission.trim() ? parseFloat(minCommission.replace(/,/g, ""), 10) : null
+    if (minComm != null && !Number.isNaN(minComm)) {
+      list = list.filter((p) => {
+        const c = p.total_commission ?? p.totalCommission ?? 0
+        return Number(c) >= minComm
+      })
+    }
+    const maxComm = maxCommission.trim() ? parseFloat(maxCommission.replace(/,/g, ""), 10) : null
+    if (maxComm != null && !Number.isNaN(maxComm)) {
+      list = list.filter((p) => {
+        const c = p.total_commission ?? p.totalCommission ?? 0
+        return Number(c) <= maxComm
+      })
+    }
+    return list
+  }, [filteredPartners, createdFrom, createdTo, minInvestors, maxInvestors, minCommission, maxCommission])
 
   const table = useReactTable({
     data: displayData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
-
-  const filterConfig = [
-    {
-      key: "status",
-      value: filters.status,
-      placeholder: "Status",
-      options: [
-        { value: "all", label: "All" },
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
-      ],
-    },
-    {
-      key: "branch_id",
-      value: filters.branch_id || "all",
-      placeholder: "Branch",
-      options: [
-        { value: "all", label: "All Branches" },
-        ...(branches.map((b) => ({ value: String(b.id), label: b.name })) ?? []),
-      ],
-    },
-  ]
 
   // Loading skeleton
   const LoadingSkeleton = () => (
@@ -336,14 +384,158 @@ const PartnersPage = () => {
         onActionClick={handleExport}
       />
 
-      <FilterBar
-        searchValue={filters.search}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Search by name, email, Partner ID..."
-        filters={filterConfig}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-      />
+      {/* Filters */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by name, email, Partner ID..."
+              value={filters.search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Referral RM</label>
+            <Select
+              value={filters.rmId != null && filters.rmId !== "" ? String(filters.rmId) : "all"}
+              onValueChange={(v) => handleFilterChange("rmId", v)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All RMs" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All RMs</SelectItem>
+                {rms.map((rm) => (
+                  <SelectItem key={rm.id} value={String(rm.id)}>
+                    {rm.rm_name ?? rm.name ?? `RM ${rm.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Created from</label>
+            <Input
+              type="date"
+              value={createdFrom}
+              onChange={(e) => setCreatedFrom(e.target.value)}
+              className="w-[150px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Created to</label>
+            <Input
+              type="date"
+              value={createdTo}
+              onChange={(e) => setCreatedTo(e.target.value)}
+              className="w-[150px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Min investors</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              value={minInvestors}
+              onChange={(e) => setMinInvestors(e.target.value)}
+              className="w-[110px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Max investors</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="—"
+              value={maxInvestors}
+              onChange={(e) => setMaxInvestors(e.target.value)}
+              className="w-[110px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Min commission (₹)</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              value={minCommission}
+              onChange={(e) => setMinCommission(e.target.value)}
+              className="w-[130px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Max commission (₹)</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="—"
+              value={maxCommission}
+              onChange={(e) => setMaxCommission(e.target.value)}
+              className="w-[130px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Branch</label>
+            <Select
+              value={filters.branch_id || "all"}
+              onValueChange={(v) => handleFilterChange("branch_id", v)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">KYC Status</label>
+            <Select
+              value={filters.kycStatus || "all"}
+              onValueChange={(v) => handleFilterChange("kycStatus", v)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="complete">Complete</SelectItem>
+                <SelectItem value="uploaded">Uploaded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Status</label>
+            <Select
+              value={filters.status || "all"}
+              onValueChange={(v) => handleFilterChange("status", v)}
+            >
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" size="default" onClick={handleClearFilters} className="gap-2">
+            <X className="h-4 w-4" />
+            Clear filters
+          </Button>
+        </div>
+      </div>
 
       {loading ? (
         <div className="rounded-md border p-4">

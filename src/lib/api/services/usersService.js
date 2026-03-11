@@ -451,6 +451,28 @@ export const usersService = {
     return response.data
   },
 
+  async getRMInvestors(rmId, params = { limit: 50, offset: 0 }) {
+    const response = await apiClient.get(endpoints.rm.investors(rmId), { params })
+    return response.data?.data || { investors: [], total: 0, limit: 50, offset: 0 }
+  },
+
+  async getRMVisits(rmId, params = { limit: 50, offset: 0, visit_type: undefined }) {
+    const q = { ...params }
+    if (!q.visit_type) delete q.visit_type
+    const response = await apiClient.get(endpoints.rm.visits(rmId), { params: q })
+    return response.data?.data || { visits: [], visits_count: 0, limit: 50, offset: 0 }
+  },
+
+  async getRMCommissionSummary(rmId) {
+    const response = await apiClient.get(endpoints.rm.commissionSummary(rmId))
+    return response.data?.data || null
+  },
+
+  async getRMCommissions(rmId, params = { limit: 50, offset: 0 }) {
+    const response = await apiClient.get(endpoints.rm.commissions(rmId), { params })
+    return response.data?.data || { commissions: [], count: 0, limit: 50, offset: 0 }
+  },
+
   // =====================
   // Partner Management
   // =====================

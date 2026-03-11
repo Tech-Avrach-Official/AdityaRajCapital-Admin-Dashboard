@@ -36,6 +36,10 @@ export const endpoints = {
     delete: (id) => `/api/admin/rm/${id}`,
     validateCode: (code) => `/api/admin/rm/code/${code}`,
     partners: (id) => `/api/admin/rm/${id}/partners`,
+    investors: (id) => `/api/admin/rm/${id}/investors`,
+    visits: (id) => `/api/admin/rm/${id}/visits`,
+    commissionSummary: (id) => `/api/admin/rm/${id}/commission-summary`,
+    commissions: (id) => `/api/admin/rm/${id}/commissions`,
   },
 
   // Partner Management (Admin)
