@@ -18,6 +18,7 @@ import InvestmentsPage from "../admin/pages/financial/investments/InvestmentsPag
 import PayoutsPage from "../admin/pages/financial/payouts/PayoutsPage"
 import UploadBankPdfPage from "../admin/pages/financial/payouts/UploadBankPdfPage"
 import CommissionsPage from "../admin/pages/financial/commissions/CommissionsPage"
+import UploadCommissionPage from "../admin/pages/financial/commissions/UploadCommissionPage"
 import PaymentVerificationPage from "../admin/pages/financial/payment-verification/PaymentVerificationPage"
 import SettingsPage from "../admin/pages/settings/SettingsPage"
 import AuditPage from "../admin/pages/audit/AuditPage"
@@ -72,6 +73,7 @@ const AllRoutes = () => {
         <Route path="financial/payouts" element={<PayoutsPage />} />
         <Route path="financial/payouts/upload" element={<UploadBankPdfPage />} />
         <Route path="financial/commissions" element={<CommissionsPage />} />
+        <Route path="financial/commissions/upload" element={<UploadCommissionPage />} />
         <Route path="financial/payment-verification" element={<PaymentVerificationPage />} />
 
         {/* Settings */}

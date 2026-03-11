@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Upload } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
@@ -301,7 +301,17 @@ const CommissionsPage = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Commissions" />
+      <PageHeader
+        title="Commissions"
+        action="Upload Bank PDF"
+        actionHref="/admin/financial/commissions/upload"
+        actionLabel={
+          <>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Bank PDF
+          </>
+        }
+      />
 
       {/* Filters */}
       <div className="rounded-lg border border-border bg-card p-4">
