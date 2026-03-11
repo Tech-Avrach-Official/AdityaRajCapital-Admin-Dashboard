@@ -110,9 +110,6 @@ const PayoutsPage = () => {
     loadPayouts(newPage)
   }
 
-  const handleUploadPDF = () => {
-    toast.info("Upload Bank PDF - To be implemented with file upload modal")
-  }
 
   const columns = useMemo(
     () => [
@@ -277,13 +274,13 @@ const PayoutsPage = () => {
       <PageHeader
         title="Payout Management"
         action="Upload Bank PDF"
+        actionHref="/admin/financial/payouts/upload"
         actionLabel={
           <>
             <Upload className="mr-2 h-4 w-4" />
             Upload Bank PDF
           </>
         }
-        onActionClick={handleUploadPDF}
       />
 
       {/* Filters: Month, Year (required), Slot, Status */}

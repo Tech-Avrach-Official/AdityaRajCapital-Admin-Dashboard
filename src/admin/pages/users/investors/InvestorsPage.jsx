@@ -58,6 +58,11 @@ const InvestorsPage = () => {
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
+  const [referralSearch, setReferralSearch] = useState("")
+  const [createdFrom, setCreatedFrom] = useState("")
+  const [createdTo, setCreatedTo] = useState("")
+  const [minInvestment, setMinInvestment] = useState("")
+  const [maxInvestment, setMaxInvestment] = useState("")
   const [kycFilter, setKycFilter] = useState("all")
   const [branchFilter, setBranchFilter] = useState("all")
   const [exporting, setExporting] = useState(false)
@@ -91,11 +96,47 @@ const InvestorsPage = () => {
           (i.email && i.email.toLowerCase().includes(q))
       )
     }
+    const refQ = referralSearch.trim().toLowerCase()
+    if (refQ) {
+      list = list.filter((i) => (i.referral && i.referral.toLowerCase().includes(refQ)))
+    }
+    if (createdFrom) {
+      const from = new Date(createdFrom)
+      from.setHours(0, 0, 0, 0)
+      list = list.filter((i) => {
+        const d = i.created_at ?? i.created
+        if (!d) return false
+        return new Date(d) >= from
+      })
+    }
+    if (createdTo) {
+      const to = new Date(createdTo)
+      to.setHours(23, 59, 59, 999)
+      list = list.filter((i) => {
+        const d = i.created_at ?? i.created
+        if (!d) return false
+        return new Date(d) <= to
+      })
+    }
+    const minVal = minInvestment.trim() ? parseFloat(minInvestment.replace(/,/g, ""), 10) : null
+    if (minVal != null && !Number.isNaN(minVal)) {
+      list = list.filter((i) => {
+        const tot = Number(i.total_invested) || 0
+        return tot >= minVal
+      })
+    }
+    const maxVal = maxInvestment.trim() ? parseFloat(maxInvestment.replace(/,/g, ""), 10) : null
+    if (maxVal != null && !Number.isNaN(maxVal)) {
+      list = list.filter((i) => {
+        const tot = Number(i.total_invested) || 0
+        return tot <= maxVal
+      })
+    }
     if (kycFilter !== "all") {
       list = list.filter((i) => (i.kyc_status || "").toLowerCase() === kycFilter.toLowerCase())
     }
     return list
-  }, [investors, searchValue, kycFilter])
+  }, [investors, searchValue, referralSearch, createdFrom, createdTo, minInvestment, maxInvestment, kycFilter])
 
   const handleExport = () => {
     setExporting(true)
@@ -360,6 +401,57 @@ const InvestorsPage = () => {
               className="pl-10"
             />
           </div>
+          <div className="relative min-w-[180px]">
+            <Input
+              type="text"
+              placeholder="Referral name"
+              value={referralSearch}
+              onChange={(e) => setReferralSearch(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">Created from</label>
+              <Input
+                type="date"
+                value={createdFrom}
+                onChange={(e) => setCreatedFrom(e.target.value)}
+                className="w-[150px]"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">Created to</label>
+              <Input
+                type="date"
+                value={createdTo}
+                onChange={(e) => setCreatedTo(e.target.value)}
+                className="w-[150px]"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Min investment (₹)</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. 50000"
+              value={minInvestment}
+              onChange={(e) => setMinInvestment(e.target.value)}
+              className="w-[140px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">Max investment (₹)</label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. 500000"
+              value={maxInvestment}
+              onChange={(e) => setMaxInvestment(e.target.value)}
+              className="w-[140px]"
+            />
+          </div>
           <Select value={branchFilter} onValueChange={setBranchFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Branch" />
@@ -415,6 +507,11 @@ const InvestorsPage = () => {
               className="mt-4"
               onClick={() => {
                 setSearchValue("")
+                setReferralSearch("")
+                setCreatedFrom("")
+                setCreatedTo("")
+                setMinInvestment("")
+                setMaxInvestment("")
                 setKycFilter("all")
                 setBranchFilter("all")
               }}

@@ -1,4 +1,5 @@
 import React from "react"
+import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -7,6 +8,7 @@ const PageHeader = ({
   description,
   action,
   actionLabel,
+  actionHref,
   onActionClick,
   className,
 }) => {
@@ -19,11 +21,16 @@ const PageHeader = ({
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
           )}
         </div>
-        {action && (
-          <Button onClick={onActionClick} size="default">
-            {actionLabel || action}
-          </Button>
-        )}
+        {action &&
+          (actionHref ? (
+            <Button asChild size="default">
+              <Link to={actionHref}>{actionLabel || action}</Link>
+            </Button>
+          ) : (
+            <Button onClick={onActionClick} size="default">
+              {actionLabel || action}
+            </Button>
+          ))}
       </div>
     </div>
   )

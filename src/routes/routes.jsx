@@ -16,6 +16,7 @@ import PlanDetailPage from "../admin/pages/plans/PlanDetailPage"
 import EditPlanPage from "../admin/pages/plans/EditPlanPage"
 import InvestmentsPage from "../admin/pages/financial/investments/InvestmentsPage"
 import PayoutsPage from "../admin/pages/financial/payouts/PayoutsPage"
+import UploadBankPdfPage from "../admin/pages/financial/payouts/UploadBankPdfPage"
 import CommissionsPage from "../admin/pages/financial/commissions/CommissionsPage"
 import PaymentVerificationPage from "../admin/pages/financial/payment-verification/PaymentVerificationPage"
 import SettingsPage from "../admin/pages/settings/SettingsPage"
@@ -69,6 +70,7 @@ const AllRoutes = () => {
         {/* Financial Management */}
         <Route path="financial/investments" element={<InvestmentsPage />} />
         <Route path="financial/payouts" element={<PayoutsPage />} />
+        <Route path="financial/payouts/upload" element={<UploadBankPdfPage />} />
         <Route path="financial/commissions" element={<CommissionsPage />} />
         <Route path="financial/payment-verification" element={<PaymentVerificationPage />} />
 
