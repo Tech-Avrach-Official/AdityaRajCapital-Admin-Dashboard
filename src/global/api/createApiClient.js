@@ -23,7 +23,7 @@ export function createApiClient({ tokenKey, loginPath, keysToClearOn401 = [], ba
   instance.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem(tokenKey)
-      if (token) {
+      if (token) { 
         config.headers.Authorization = `Bearer ${token}`
       }
       return config

@@ -1,11 +1,9 @@
 import { Route } from "react-router-dom"
-
-export const PartnerDashboardPlaceholder = () => (
-  <div className="p-6">
-    <h1 className="text-2xl font-bold text-gray-800">Partner Dashboard</h1>
-    <p className="text-gray-600 mt-2">Welcome to the Partner portal. Content coming soon.</p>
-  </div>
-)
+import Dashboard from "../pages/dashbord/Dashboard"
+import Investors from "../pages/investors/Investors"
+import Leaderboard from "../pages/leaderboard/Leaderboard"
+import CommissionHistory from "../pages/commissionHistory/CommissionHistory"
+import Profile from "../pages/profile/Profile"
 
 /**
  * Partner nested routes (rendered under PartnerLayout via <Outlet />).
@@ -13,6 +11,11 @@ export const PartnerDashboardPlaceholder = () => (
  */
 export const PartnerRoutes = () => (
   <>
-    <Route index element={<PartnerDashboardPlaceholder />} />
+    <Route index element={<Dashboard />} />
+    <Route path="investors" element={<Investors />} />
+    <Route path="leaderboard" element={<Leaderboard />} />
+    <Route path="commissions-history" element={<CommissionHistory />} />
+    <Route path="profile" element={<Profile />} />
+    {/* <Route path="user" element={} /> */}
   </>
 )
