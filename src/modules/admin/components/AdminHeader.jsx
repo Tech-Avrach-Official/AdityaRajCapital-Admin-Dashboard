@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell, Search, ChevronDown, LogOut } from "lucide-react"
+import { Bell, ChevronDown, LogOut } from "lucide-react"
 import toast from "react-hot-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -12,9 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { layout } from "@/lib/theme"
 import { useAuth } from "@/modules/admin/hooks"
+import GlobalSearch from "@/modules/admin/components/GlobalSearch"
 
 const AdminHeader = () => {
   const navigate = useNavigate()
@@ -43,14 +43,9 @@ const AdminHeader = () => {
           </h1>
         </div>
 
-        {/* Search - Center (Optional) */}
-        <div className="relative flex-1 max-w-md mx-4 lg:mx-8 hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search..."
-            className="pl-10"
-          />
+        {/* Global Search */}
+        <div className="flex-1 mx-4 lg:mx-8 hidden md:block">
+          <GlobalSearch />
         </div>
 
         {/* Right Side - Notifications & Profile */}
