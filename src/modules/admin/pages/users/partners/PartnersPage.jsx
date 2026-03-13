@@ -4,7 +4,6 @@ import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-tabl
 import { Eye, Download, Search, X } from "lucide-react"
 import { toast } from "react-hot-toast"
 import PageHeader from "@/components/common/PageHeader"
-import StatusBadge from "@/components/common/StatusBadge"
 import {
   Table,
   TableBody,
@@ -21,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { usePartners } from "@/modules/admin/hooks"
 import { hierarchyService } from "@/modules/admin/api/services/hierarchyService"
 import { usersService } from "@/modules/admin/api/services/usersService"
+import { cn } from "@/lib/utils"
 
 const PartnersPage = () => {
   // Redux state and actions
@@ -234,21 +234,6 @@ const PartnersPage = () => {
             <span className="text-muted-foreground italic text-sm">Unassigned</span>
           )
         },
-      },
-      {
-        accessorKey: "kyc_status",
-        header: "KYC Status",
-        cell: ({ row }) => (
-          <StatusBadge
-            status={row.original.kyc_status}
-            customLabel={
-              row.original.kyc_status
-                ? row.original.kyc_status.charAt(0).toUpperCase() +
-                  row.original.kyc_status.slice(1)
-                : "—"
-            }
-          />
-        ),
       },
       {
         accessorKey: "referral_summary",
@@ -510,8 +495,9 @@ const PartnersPage = () => {
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="complete">Complete</SelectItem>
+                <SelectItem value="verified">Verified</SelectItem>
                 <SelectItem value="uploaded">Uploaded</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -563,18 +549,25 @@ const PartnersPage = () => {
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  const kycStatus = (row.original.kyc_status || "").toLowerCase()
+                  const borderClass =
+                    kycStatus === "verified"
+                      ? "border-l-4 border-l-green-500"
+                      : "border-l-4 border-l-orange-500"
+                  return (
+                    <TableRow key={row.id} className={cn(borderClass)}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )
+                })
               ) : (
                 <TableRow>
                   <TableCell

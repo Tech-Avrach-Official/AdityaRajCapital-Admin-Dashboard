@@ -67,7 +67,7 @@ function mapKycToUi(kycData) {
   const raw = kycData?.kyc
   if (!raw) return { status: "pending", aadhaar: null, pan: null, bank: null, documents: kycData?.documents ?? [] }
   return {
-    status: raw.kyc_verified ? "complete" : "pending",
+    status: raw.kyc_verified ? "verified" : "pending",
     aadhaar: raw.aadhar_name || raw.aadhar_number
       ? {
           name: raw.aadhar_name,
@@ -232,8 +232,20 @@ const InvestorDetailPage = () => {
                 <div className="flex flex-wrap items-center gap-3 pt-2">
                   <StatusBadge status={investor.status || "active"} />
                   <StatusBadge
-                    status={investor.kyc_status === "complete" ? "verified" : "pending"}
-                    customLabel={investor.kyc_status === "complete" ? "KYC Complete" : "KYC Pending"}
+                    status={
+                      investor.kyc_status === "verified" ||
+                      investor.kyc_status === "complete" ||
+                      investor.kyc_complete === 1
+                        ? "verified"
+                        : "pending"
+                    }
+                    customLabel={
+                      investor.kyc_status === "verified" ||
+                      investor.kyc_status === "complete" ||
+                      investor.kyc_complete === 1
+                        ? "KYC Verified"
+                        : "KYC Pending"
+                    }
                   />
                   <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                     Nominees {nomineesAdded ? "Added" : "Not added"}
@@ -498,8 +510,8 @@ const InvestorDetailPage = () => {
             <div className="mb-6 flex items-center gap-3">
               <span className="text-sm text-muted-foreground">Status</span>
               <StatusBadge
-                status={kyc.status === "complete" ? "verified" : "pending"}
-                customLabel={kyc.status === "complete" ? "Complete" : "Pending"}
+                status={kyc.status === "verified" || kyc.status === "complete" ? "verified" : "pending"}
+                customLabel={kyc.status === "verified" || kyc.status === "complete" ? "Verified" : "Pending"}
               />
             </div>
             <div className="grid gap-6 sm:grid-cols-2">

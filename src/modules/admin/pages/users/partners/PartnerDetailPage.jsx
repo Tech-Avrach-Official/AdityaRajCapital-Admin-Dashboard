@@ -87,7 +87,7 @@ const isPdfUrl = (url, docType) => {
 function mapPartnerKycToUi(kyc) {
   if (!kyc) return { status: "pending", aadhaar: null, pan: null, bank: null }
   return {
-    status: kyc.kyc_verified ? "complete" : "pending",
+    status: kyc.kyc_verified ? "verified" : "pending",
     aadhaar:
       kyc.aadhar_name || kyc.aadhar_number
         ? {
@@ -244,11 +244,11 @@ const PartnerDetailPage = () => {
                 <div className="flex flex-wrap items-center gap-3 pt-2">
                   <StatusBadge status={p.status || "active"} />
                   <StatusBadge
-                    status={p.kyc_status || (kycUi.status === "complete" ? "verified" : "pending")}
+                    status={p.kyc_status || (kycUi.status === "verified" || kycUi.status === "complete" ? "verified" : "pending")}
                     customLabel={
                       p.kyc_status
                         ? String(p.kyc_status).charAt(0).toUpperCase() + String(p.kyc_status).slice(1)
-                        : kycUi.status === "complete"
+                        : kycUi.status === "verified" || kycUi.status === "complete"
                           ? "KYC Verified"
                           : "KYC Pending"
                     }
@@ -490,11 +490,11 @@ const PartnerDetailPage = () => {
           <div className="mb-6 flex items-center gap-3">
             <span className="text-sm text-muted-foreground">Status</span>
             <StatusBadge
-              status={p.kyc_status || (kycUi.status === "complete" ? "verified" : "pending")}
+              status={p.kyc_status || (kycUi.status === "verified" || kycUi.status === "complete" ? "verified" : "pending")}
               customLabel={
                 p.kyc_status
                   ? String(p.kyc_status).charAt(0).toUpperCase() + String(p.kyc_status).slice(1)
-                  : kycUi.status === "complete"
+                  : kycUi.status === "verified" || kycUi.status === "complete"
                     ? "Verified"
                     : "Pending"
               }

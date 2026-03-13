@@ -9,7 +9,6 @@ import {
 import { toast } from "react-hot-toast"
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, Search } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
-import StatusBadge from "@/components/common/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -134,7 +133,15 @@ const InvestorsPage = () => {
       })
     }
     if (kycFilter !== "all") {
-      list = list.filter((i) => (i.kyc_status || "").toLowerCase() === kycFilter.toLowerCase())
+      const kf = kycFilter.toLowerCase()
+      list = list.filter((i) => {
+        const status = (i.kyc_status || "").toLowerCase()
+        const isVerified =
+          status === "verified" || status === "complete" || i.kyc_complete === 1
+        if (kf === "verified") return isVerified
+        if (kf === "pending") return !isVerified
+        return status === kf
+      })
     }
     return list
   }, [investors, searchValue, referralSearch, createdFrom, createdTo, minInvestment, maxInvestment, kycFilter])
@@ -270,16 +277,6 @@ const InvestorsPage = () => {
             </div>
           )
         },
-      },
-      {
-        accessorKey: "kyc_status",
-        header: "KYC",
-        cell: ({ row }) => (
-          <StatusBadge
-            status={row.original.kyc_status === "complete" ? "verified" : "pending"}
-            customLabel={row.original.kyc_status === "complete" ? "Complete" : "Pending"}
-          />
-        ),
       },
       {
         accessorKey: "total_invested",
@@ -473,7 +470,7 @@ const InvestorsPage = () => {
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="pending">KYC Pending</SelectItem>
-              <SelectItem value="complete">KYC Complete</SelectItem>
+              <SelectItem value="verified">KYC Verified</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -537,12 +534,22 @@ const InvestorsPage = () => {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows.map((row, idx) => (
+                {table.getRowModel().rows.map((row, idx) => {
+                  const kycStatus = (row.original.kyc_status || "").toLowerCase()
+                  const isVerified =
+                    kycStatus === "verified" ||
+                    kycStatus === "complete" ||
+                    row.original.kyc_complete === 1
+                  const borderClass = isVerified
+                    ? "border-l-4 border-l-green-500"
+                    : "border-l-4 border-l-orange-500"
+                  return (
                   <TableRow
                     key={row.id}
                     className={cn(
                       "cursor-pointer transition-colors",
-                      idx % 2 === 1 && "bg-muted/20"
+                      idx % 2 === 1 && "bg-muted/20",
+                      borderClass
                     )}
                     onClick={(e) => {
                       if (!e.target.closest("button")) {
@@ -558,7 +565,8 @@ const InvestorsPage = () => {
                       </TableCell>
                     ))}
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

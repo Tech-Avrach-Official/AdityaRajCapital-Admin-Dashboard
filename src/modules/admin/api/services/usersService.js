@@ -655,7 +655,7 @@ export const usersService = {
     // Referral: partner name or RM name (mutually exclusive); branch from partner's RM or investor's direct RM
     const normalizedData = Array.isArray(investors)
       ? investors.map((inv) => {
-          const kycStatus = inv.kyc_complete === 1 ? "complete" : "pending"
+          const kycStatus = inv.kyc_status ?? (inv.kyc_complete === 1 ? "verified" : "pending")
           const partnerName = inv.partner?.name ?? inv.partner?.partner_name ?? null
           const rmName = inv.rm?.name ?? inv.rm?.rm_code ?? null
           const referral = partnerName
@@ -710,7 +710,7 @@ export const usersService = {
       return {
         ...data,
         referral,
-        kyc_status: data.kyc_complete === 1 ? "complete" : "pending",
+        kyc_status: data.kyc_status ?? (data.kyc_complete === 1 ? "verified" : "pending"),
         nominees_added: data.has_nominees === 1,
         joined: data.created_at,
       }
