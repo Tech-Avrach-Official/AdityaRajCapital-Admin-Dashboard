@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react"
-import { Download, Search, X } from "lucide-react"
+import { Download, Eye, Search, X } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { useNavigate } from "react-router-dom"
@@ -51,7 +51,6 @@ const Partners = () => {
       try {
 
         const data = await subUsers.getSubUsers()
-
         const list = data?.partners ?? []
 
         setPartners(list)
@@ -123,8 +122,8 @@ const Partners = () => {
       "Email",
       "Mobile",
       "Status",
-      "Partner Commission",
-      "RM Commission",
+      "Total Commission",
+      "Investor Commission",
       "Created At",
     ]
 
@@ -136,25 +135,27 @@ const Partners = () => {
       p.status,
       p.commission_earned,
       p.rm_commission_earned_from_their_investors,
-      p.created_at,
+      new Date(p.created_at).toLocaleDateString("en-IN")
 
     ])
 
-    const csv = [headers, ...rows]
-      .map((r) => r.join(","))
-      .join("\n")
+    const csvContent =
+      [headers, ...rows]
+        .map((row) => row.join(","))
+        .join("\n")
 
-    const blob = new Blob([csv], { type: "text/csv" })
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
 
     const url = URL.createObjectURL(blob)
 
-    const a = document.createElement("a")
+    const link = document.createElement("a")
 
-    a.href = url
-    a.download = "partners.csv"
-    a.click()
+    link.href = url
+    link.setAttribute("download", "partners.csv")
 
-    URL.revokeObjectURL(url)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
 
   }
 
@@ -205,7 +206,7 @@ const Partners = () => {
 
     {
       accessorKey: "commission_earned",
-      header: "Partner Commission",
+      header: "Total Commission",
       cell: ({ row }) => (
         <span className="font-medium">
           {formatCurrency(row.original.commission_earned)}
@@ -227,9 +228,27 @@ const Partners = () => {
 
     {
       accessorKey: "created_at",
-      header: "Created",
+      header: "Created At",
       cell: ({ row }) => (
         new Date(row.original.created_at).toLocaleDateString("en-IN")
+      ),
+    },
+
+    {
+      accessorKey: "action",
+      header: "Action",
+      cell: ({ row }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(`/rm/partners/${row.original.id}`)
+          }}
+        >
+          <Eye className="mr-1 h-4 w-4" />
+          View
+        </Button>
       ),
     }
 
@@ -253,17 +272,19 @@ const Partners = () => {
 
     <div className="space-y-6">
 
-      <PageHeader
-        title="Partners"
-        actionLabel={
-          <>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </>
-        }
-        onActionClick={handleExport}
-      />
+      {/* Header + Export */}
+      <div className="flex justify-between items-center">
 
+        <PageHeader title="Partners" />
+
+        <Button onClick={handleExport}>
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
+
+      </div>
+
+      {/* Filters */}
       <div className="flex flex-wrap gap-3">
 
         <div className="relative max-w-xs">

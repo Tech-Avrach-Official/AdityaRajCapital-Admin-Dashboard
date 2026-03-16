@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, Download, X } from "lucide-react";
+import { Search, Download, X, Eye } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
-import StatusBadge from "@/components/common/StatusBadge";
 
 import {
   Table,
@@ -34,20 +33,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { subUsers } from "@/modules/rm/api/services/subUsers";
-// import InvestorDetails from "./components/InvestorDetails";
 
 const Investor = () => {
   const [investors, setInvestors] = useState([]);
   const [filteredInvestors, setFilteredInvestors] = useState([]);
   const [loading, setLoading] = useState(true);
-const navigate = useNavigate()
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [kycFilter, setKycFilter] = useState("all");
 
-  // const [selectedInvestor, setSelectedInvestor] = useState(null);
-  // const [open, setOpen] = useState(false);
-  // const [detailLoading, setDetailLoading] = useState(false);
   useEffect(() => {
     const loadInvestors = async () => {
       try {
@@ -113,18 +108,19 @@ const navigate = useNavigate()
     const headers = [
       "Client ID",
       "Name",
-      "Email",
+      // "Email",
       "Mobile",
       "Status",
       "KYC",
       "Commission Earned",
       "Created At",
+      "Action",
     ];
 
     const rows = filteredInvestors.map((i) => [
       i.client_id,
       i.name,
-      i.email,
+      // i.email,
       i.mobile,
       i.status,
       i.kyc_complete ? "Complete" : "Pending",
@@ -173,10 +169,10 @@ const navigate = useNavigate()
         },
       },
 
-      {
-        accessorKey: "email",
-        header: "Email",
-      },
+      // {
+      //   accessorKey: "email",
+      //   header: "Email",
+      // },
 
       {
         accessorKey: "referral_code",
@@ -238,6 +234,20 @@ const navigate = useNavigate()
         cell: ({ row }) =>
           new Date(row.original.created_at).toLocaleDateString("en-IN"),
       },
+      {
+        accessorKey: "action",
+        header: "Action",
+        cell: ({ row }) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/rm/investors/${row.original.id}`)}
+          >
+            <Eye className="h-4 w-4" />
+            View
+          </Button>
+        ),
+      },
     ],
     [],
   );
@@ -286,16 +296,16 @@ const navigate = useNavigate()
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Investors"
-        actionLabel={
-          <>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </>
-        }
-        onActionClick={handleExport}
-      />
+     <div className="flex justify-between items-center">
+
+        <PageHeader title="Investors" />
+
+        <Button onClick={handleExport}>
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
+
+      </div>  
 
       <div className="flex flex-wrap gap-3">
         <div className="relative max-w-xs">
@@ -379,9 +389,9 @@ const navigate = useNavigate()
                     <TableRow
                       key={row.id}
                       className={`${borderClass} cursor-pointer hover:bg-muted/50`}
-                       onClick={() =>
-  navigate(`/rm/investors/${row.original.id}`)
-}
+                      onClick={() =>
+                        navigate(`/rm/investors/${row.original.id}`)
+                      }
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
@@ -408,12 +418,6 @@ const navigate = useNavigate()
           </Table>
         </div>
       )}
-      {/* <InvestorDetails
-        open={open}
-        setOpen={setOpen}
-        investor={selectedInvestor}
-        loading={detailLoading}
-      /> */}
     </div>
   );
 };

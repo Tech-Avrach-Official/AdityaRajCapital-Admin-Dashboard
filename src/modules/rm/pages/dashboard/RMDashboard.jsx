@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { Users, Percent, Wallet, Clock, RefreshCw, TrendingUp, BadgeIndianRupee } from "lucide-react"
+import { Users, Percent, Wallet, Clock, RefreshCw, TrendingUp, BadgeIndianRupee, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -61,6 +61,43 @@ const RMDashboard = () => {
   const [refreshing, setRefreshing] = useState(false)
   const [report, setReport] = useState(null)
 
+  const handleExport = (report) => {
+
+  if (!report) return
+
+  const headers = [
+    "Total Partners",
+    "Total Investors",
+    "Commission Earned",
+    "Receivable Commission",
+    "Pending Commission"
+  ]
+
+  const rows = [[
+    report.total_partners ?? 0,
+    report.total_investors ?? 0,
+    report.total_commission_earned ?? 0,
+    report.total_receivable_commission ?? 0,
+    report.total_pending_commission ?? 0
+  ]]
+
+  const csv =
+    [headers, ...rows]
+      .map((row) => row.join(","))
+      .join("\n")
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement("a")
+  link.href = url
+  link.setAttribute("download", "rm-dashboard-report.csv")
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
   const loadReport = async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true)
@@ -112,8 +149,43 @@ const RMDashboard = () => {
             Overview of your performance and activity
           </p>
         </div>
+    <div className="flex items-center gap-3">
 
-        <div className="flex items-center gap-3">
+  <Select value={period} onValueChange={setPeriod}>
+    <SelectTrigger className="w-[140px] rounded-xl border-border/60">
+      <SelectValue placeholder="Period" />
+    </SelectTrigger>
+    <SelectContent>
+      {PERIOD_OPTIONS.map((p) => (
+        <SelectItem key={p.value} value={p.value}>
+          {p.label}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+
+  <Button
+    variant="outline"
+    size="icon"
+    onClick={() => loadReport(true)}
+    disabled={refreshing}
+    className="rounded-xl border-border/60"
+  >
+    <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+  </Button>
+
+  {/* Export Button */}
+  <Button
+    variant="outline"
+    onClick={() => handleExport(report)}
+    className="rounded-xl border-border/60"
+  >
+    <Download className="w-4 h-4 mr-2" />
+    Export
+  </Button>
+
+</div>
+        {/* <div className="flex items-center gap-3">
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-[140px] rounded-xl border-border/60">
               <SelectValue placeholder="Period" />
@@ -136,7 +208,7 @@ const RMDashboard = () => {
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Stat Cards */}
@@ -243,7 +315,7 @@ const RMDashboard = () => {
               </div>
             </div>
           </div>
-          <div className="p-5">
+          <div className="p-0">
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie

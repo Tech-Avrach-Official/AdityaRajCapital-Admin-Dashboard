@@ -1,63 +1,57 @@
-import React, { useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
-import { Lock, Mail, Loader2 } from "lucide-react"
-import toast from "react-hot-toast"
-import axios from "axios"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"
+import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Lock, Mail, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { rmLogin } from "../store/features/auth/authThunks";
+import { useDispatch } from "react-redux";
 
 const RMLoginPage = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const from = location.state?.from?.pathname || "/rm"
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const from = location.state?.from?.pathname || "/rm";
 
-  const [formData, setFormData] = useState({ email: "", password: "" })
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState({})
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
 
   const validate = () => {
-    const next = {}
-    if (!formData.email?.trim()) next.email = "Email is required"
-    if (!formData.password) next.password = "Password is required"
-    setErrors(next)
-    return Object.keys(next).length === 0
-  }
+    const next = {};
+    if (!formData.email?.trim()) next.email = "Email is required";
+    if (!formData.password) next.password = "Password is required";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validate()) return
-    setLoading(true)
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
     try {
-      const { data } = await axios.post(`${API_BASE}/api/rm/login`, {
-        email: formData.email.trim(),
-        password: formData.password,
-      })
-      if (data?.success && data?.data) {
-        const { token, rm } = data.data
-        localStorage.setItem("rmToken", token)
-        if (rm?.id != null) localStorage.setItem("rmId", String(rm.id))
-        toast.success(data.message || "Login successful")
-        navigate(from, { replace: true })
-      } else {
-        toast.error(data?.message || "Login failed")
-      }
-    } catch (err) {
-      const message = err.response?.data?.message || err.message || "Login failed"
-      toast.error(message)
-    } finally {
-      setLoading(false)
+      await dispatch(
+        rmLogin({
+          email: formData.email.trim(),
+          password: formData.password,
+        }),
+      ).unwrap();
+
+      toast.success("Login successful");
+
+      navigate(from, { replace: true });
+    } catch (error) {
+      toast.error(error || "Login failed");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -101,7 +95,9 @@ const RMLoginPage = () => {
                 />
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive mt-1">{errors.password}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {errors.password}
+                </p>
               )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -115,7 +111,7 @@ const RMLoginPage = () => {
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default RMLoginPage
+export default RMLoginPage;

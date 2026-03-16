@@ -7,6 +7,8 @@ import InvestorDetails2 from "../pages/investor/components/InvestorDetails2"
 import PartnerDetails from "../pages/partner/components/PartnerDetails"
 import InvestmentPage from "../pages/investor/components/InvestmentPage"
 import VisitDetail from "../pages/visits/components/VisitDetails"
+import AddVisits from "../pages/visits/components/AddVisits"
+import Profile from "../pages/profile/Profile"
 
 
 
@@ -22,5 +24,7 @@ export const RMRoutes = () => (
      <Route path="investors/investment/:id" element={<InvestmentPage />} />
      <Route path="visits" element={<Visit />} />
      <Route path="visits/:id" element={<VisitDetail />} />
+     <Route path="visits_new" element={<AddVisits />} />
+     <Route path="profile" element={<Profile />} />
   </>
 )
