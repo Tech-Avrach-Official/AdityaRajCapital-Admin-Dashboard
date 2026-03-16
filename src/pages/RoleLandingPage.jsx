@@ -1,11 +1,10 @@
 import React from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { UserCog, Handshake } from "lucide-react"
+import { UserCog, Handshake, Shield } from "lucide-react"
 
 /**
- * Role landing - shown at /. Two options: Login as RM, Login as Partner.
- * /admin is not linked; accessible only by typing the URL.
+ * Role landing - shown at /. Options: Sub-admin, RM, Partner login.
  */
 const RoleLandingPage = () => {
   const navigate = useNavigate()
@@ -20,10 +19,19 @@ const RoleLandingPage = () => {
 
         <div className="space-y-4">
           <Button
-            onClick={() => navigate("/rm/login")}
+            onClick={() => navigate("/admin")}
             className="w-full"
             size="lg"
             variant="default"
+          >
+            <Shield className="h-5 w-5 mr-2" />
+            Sub-admin login
+          </Button>
+          <Button
+            onClick={() => navigate("/rm/login")}
+            className="w-full"
+            size="lg"
+            variant="secondary"
           >
             <UserCog className="h-5 w-5 mr-2" />
             Login as RM
@@ -32,7 +40,7 @@ const RoleLandingPage = () => {
             onClick={() => navigate("/partner/login")}
             className="w-full"
             size="lg"
-            variant="secondary"
+            variant="outline"
           >
             <Handshake className="h-5 w-5 mr-2" />
             Login as Partner
