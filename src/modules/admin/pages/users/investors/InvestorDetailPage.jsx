@@ -36,6 +36,14 @@ import { purchasesService } from "@/modules/admin/api/services/purchasesService"
 import NomineeDocumentsModal from "./components/NomineeDocumentsModal"
 import KYCDocumentsModal from "./components/KYCDocumentsModal"
 import { cn, getProfileImageUrl } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 const formatDate = (d) =>
   d
@@ -106,6 +114,8 @@ const InvestorDetailPage = () => {
   const [deedLoadingId, setDeedLoadingId] = useState(null)
   const [nomineeModalNominee, setNomineeModalNominee] = useState(null)
   const [kycDocumentsModalOpen, setKycDocumentsModalOpen] = useState(false)
+  const [processDeletionOpen, setProcessDeletionOpen] = useState(false)
+  const [processDeletionLoading, setProcessDeletionLoading] = useState(false)
 
   const investorId = id != null && id !== "" ? id : null
 
@@ -165,6 +175,34 @@ const InvestorDetailPage = () => {
       toast.error("Failed to load deed")
     } finally {
       setDeedLoadingId(null)
+    }
+  }
+
+  const handleProcessDeletion = async () => {
+    if (!investorId) return
+    setProcessDeletionLoading(true)
+    try {
+      const res = await usersService.processInvestorDeletion(investorId)
+      if (res?.success) {
+        toast.success(res?.message || "Investor deletion processed")
+      } else {
+        toast.error(res?.message || "Failed to process deletion")
+      }
+
+      const refreshed = await usersService.getInvestor(investorId)
+      if (refreshed) setInvestor(refreshed)
+      setProcessDeletionOpen(false)
+    } catch (err) {
+      const status = err?.response?.status
+      const data = err?.response?.data
+      if (status === 409 && data?.error_code === "DEL_001") {
+        const reasons = Array.isArray(data?.blocked_reasons) ? data.blocked_reasons.join(", ") : ""
+        toast.error(reasons ? `${data.message} (${reasons})` : data.message || "Deletion is blocked")
+      } else {
+        toast.error(data?.message || err?.message || "Failed to process deletion")
+      }
+    } finally {
+      setProcessDeletionLoading(false)
     }
   }
 
@@ -250,6 +288,14 @@ const InvestorDetailPage = () => {
                   <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                     Nominees {nomineesAdded ? "Added" : "Not added"}
                   </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setProcessDeletionOpen(true)}
+                    disabled={processDeletionLoading}
+                  >
+                    Process deletion
+                  </Button>
                 </div>
               </div>
             </div>
@@ -733,6 +779,40 @@ const InvestorDetailPage = () => {
         nominee={nomineeModalNominee}
         investorId={investorId}
       />
+
+      <Dialog open={processDeletionOpen} onOpenChange={setProcessDeletionOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Process investor deletion</DialogTitle>
+            <DialogDescription>
+              This will process the deletion request and anonymize PII. If the investor has active obligations, the backend will block it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div>
+              <span className="font-medium text-foreground">Investor:</span>{" "}
+              <span className="font-medium">{investor?.name || "—"}</span>{" "}
+              <span className="font-mono">{investor?.client_id ? `(${investor.client_id})` : ""}</span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setProcessDeletionOpen(false)}
+              disabled={processDeletionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleProcessDeletion}
+              disabled={processDeletionLoading}
+            >
+              {processDeletionLoading ? "Processing…" : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 5. Investments */}
       <Card className="overflow-hidden border-border/60 shadow-md">

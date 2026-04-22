@@ -4,6 +4,9 @@ export const endpoints = {
   admin: {
     login: "/api/admin/login",
     getInvestor: (investorId) => `/api/admin/investors/${investorId}`,
+    processInvestorDeletion: (investorId) =>
+      `/api/admin/investors/${investorId}/process-deletion`,
+    investorDeletionRequests: "/api/admin/deletion-requests/investors",
     investorKycData: (investorId) => `/api/admin/investors/${investorId}/kyc-data`,
     investorKycDocuments: (investorId) => `/api/admin/investors/${investorId}/kyc-documents`,
     investorBankAccounts: (investorId) => `/api/admin/investors/${investorId}/bank-accounts`,
@@ -12,6 +15,9 @@ export const endpoints = {
       `/api/admin/investors/${investorId}/nominees/${nomineeId}/documents`,
     investorPurchases: (investorId) => `/api/admin/investors/${investorId}/purchases`,
     partnerKycDocuments: (partnerId) => `/api/admin/partners/${partnerId}/kyc-documents`,
+    processPartnerDeletion: (partnerId) =>
+      `/api/admin/partners/${partnerId}/process-deletion`,
+    partnerDeletionRequests: "/api/admin/deletion-requests/partners",
   },
   rm: {
     create: "/api/admin/rm/create",

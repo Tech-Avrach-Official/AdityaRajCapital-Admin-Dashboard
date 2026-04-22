@@ -38,6 +38,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -130,6 +132,8 @@ const PartnerDetailPage = () => {
   const [previewDoc, setPreviewDoc] = useState(null)
   const [imagePreview, setImagePreview] = useState({ open: false, url: null, title: null })
   const [changeRMModalOpen, setChangeRMModalOpen] = useState(false)
+  const [processDeletionOpen, setProcessDeletionOpen] = useState(false)
+  const [processDeletionLoading, setProcessDeletionLoading] = useState(false)
 
   const partnerId = id != null && id !== "" ? id : null
 
@@ -153,6 +157,33 @@ const PartnerDetailPage = () => {
     setChangeRMModalOpen(false)
     toast.success("Partner RM changed successfully")
     usersService.getPartner(partnerId).then(setDetail)
+  }
+
+  const handleProcessDeletion = async () => {
+    if (!partnerId) return
+    setProcessDeletionLoading(true)
+    try {
+      const res = await usersService.processPartnerDeletion(partnerId)
+      if (res?.success) {
+        toast.success(res?.message || "Partner deletion processed")
+      } else {
+        toast.error(res?.message || "Failed to process deletion")
+      }
+      const refreshed = await usersService.getPartner(partnerId)
+      if (refreshed) setDetail(refreshed)
+      setProcessDeletionOpen(false)
+    } catch (err) {
+      const status = err?.response?.status
+      const data = err?.response?.data
+      if (status === 409 && data?.error_code === "DEL_001") {
+        const reasons = Array.isArray(data?.blocked_reasons) ? data.blocked_reasons.join(", ") : ""
+        toast.error(reasons ? `${data.message} (${reasons})` : data.message || "Deletion is blocked")
+      } else {
+        toast.error(data?.message || err?.message || "Failed to process deletion")
+      }
+    } finally {
+      setProcessDeletionLoading(false)
+    }
   }
 
   const p = detail?.partner ?? location.state?.partner ?? null
@@ -264,6 +295,14 @@ const PartnerDetailPage = () => {
                   >
                     <UserCog className="h-4 w-4" />
                     Change RM
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setProcessDeletionOpen(true)}
+                    disabled={processDeletionLoading}
+                  >
+                    Process deletion
                   </Button>
                 </div>
               </div>
@@ -944,6 +983,42 @@ const PartnerDetailPage = () => {
         partner={detail?.partner ?? p}
         onSuccess={handleRMChangeSuccess}
       />
+
+      <Dialog open={processDeletionOpen} onOpenChange={setProcessDeletionOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Process partner deletion</DialogTitle>
+            <DialogDescription>
+              This will process the deletion request and anonymize PII. If the partner has active obligations, the backend will block it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div>
+              <span className="font-medium text-foreground">Partner:</span>{" "}
+              <span className="font-medium">{p?.name || "—"}</span>{" "}
+              <span className="font-mono">
+                {p?.partner_referral_code || p?.referral_code ? `(${p?.partner_referral_code ?? p?.referral_code})` : ""}
+              </span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setProcessDeletionOpen(false)}
+              disabled={processDeletionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleProcessDeletion}
+              disabled={processDeletionLoading}
+            >
+              {processDeletionLoading ? "Processing…" : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -24,6 +24,7 @@ import AuditPage from "../pages/audit/AuditPage"
 import NationsPage from "../pages/hierarchy/NationsPage"
 import StatesPage from "../pages/hierarchy/StatesPage"
 import BranchesPage from "../pages/hierarchy/BranchesPage"
+import DeletionRequestsPage from "../pages/deletion-requests/DeletionRequestsPage"
 
 /**
  * Admin nested routes (rendered under AdminLayout via <Outlet />).
@@ -38,6 +39,7 @@ export const AdminRoutes = () => (
     <Route path="users/rms" element={<RMsPage />} />
     <Route path="users/rms/new" element={<CreateRMPage />} />
     <Route path="users/rms/:id" element={<RMDetailPage />} />
+    <Route path="users/deletion-requests" element={<DeletionRequestsPage />} />
     <Route path="users/partners" element={<PartnersPage />} />
     <Route path="users/partners/:id" element={<PartnerDetailPage />} />
     <Route path="users/investors/:investorId/investments/:investmentId" element={<InvestmentDetailPage />} />

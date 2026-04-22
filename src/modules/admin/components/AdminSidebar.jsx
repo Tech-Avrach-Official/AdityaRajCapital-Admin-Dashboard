@@ -97,6 +97,12 @@ const AdminSidebar = ({ onMobileClose }) => {
           path: "/admin/users/investors",
           icon: Users,
         },
+        {
+          id: "deletion-requests",
+          name: "Deletion Requests",
+          path: "/admin/users/deletion-requests",
+          icon: FileText,
+        },
       ],
     },
     {

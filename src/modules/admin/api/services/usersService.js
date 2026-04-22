@@ -783,4 +783,36 @@ export const usersService = {
       investor: data?.investor ?? null,
     }
   },
+
+  // =====================
+  // Account deletion processing (Admin only)
+  // =====================
+
+  async processInvestorDeletion(investorId) {
+    const response = await adminApiClient.post(endpoints.admin.processInvestorDeletion(investorId))
+    return response.data
+  },
+
+  async processPartnerDeletion(partnerId) {
+    const response = await adminApiClient.post(endpoints.admin.processPartnerDeletion(partnerId))
+    return response.data
+  },
+
+  async getInvestorDeletionRequests(params = { status: "requested", limit: 50, offset: 0 }) {
+    const q = { ...params }
+    if (!q.status) delete q.status
+    if (q.limit == null) delete q.limit
+    if (q.offset == null) delete q.offset
+    const response = await adminApiClient.get(endpoints.admin.investorDeletionRequests, { params: q })
+    return response.data
+  },
+
+  async getPartnerDeletionRequests(params = { status: "requested", limit: 50, offset: 0 }) {
+    const q = { ...params }
+    if (!q.status) delete q.status
+    if (q.limit == null) delete q.limit
+    if (q.offset == null) delete q.offset
+    const response = await adminApiClient.get(endpoints.admin.partnerDeletionRequests, { params: q })
+    return response.data
+  },
 }
