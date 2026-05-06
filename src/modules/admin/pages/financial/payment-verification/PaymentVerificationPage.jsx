@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { usePurchases } from "@/modules/admin/hooks"
+import PermissionGate from "@/modules/admin/components/PermissionGate"
 import PaymentProofModal from "./components/PaymentProofModal"
 import RejectPaymentModal from "./components/RejectPaymentModal"
 import ApprovePaymentModal from "./components/ApprovePaymentModal"
@@ -210,36 +211,40 @@ const PaymentVerificationPage = () => {
               </Button>
 
               {/* Approve */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleApproveClick(purchase)}
-                disabled={isProcessing}
-                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                title="Approve Payment"
-              >
-                {isProcessing && verifying ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="h-4 w-4" />
-                )}
-              </Button>
+              <PermissionGate require="purchases.approve">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleApproveClick(purchase)}
+                  disabled={isProcessing}
+                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                  title="Approve Payment"
+                >
+                  {isProcessing && verifying ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  )}
+                </Button>
+              </PermissionGate>
 
               {/* Reject */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRejectClick(purchase)}
-                disabled={isProcessing}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                title="Reject Payment"
-              >
-                {isProcessing && rejecting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-              </Button>
+              <PermissionGate require="purchases.reject">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRejectClick(purchase)}
+                  disabled={isProcessing}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  title="Reject Payment"
+                >
+                  {isProcessing && rejecting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
+                </Button>
+              </PermissionGate>
             </div>
           )
         },

@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast"
 import { format } from "date-fns"
 import { Pencil, Loader2 } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
+import PermissionGate from "@/modules/admin/components/PermissionGate"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -166,15 +167,17 @@ const StatesPage = () => {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAssign(state)}
-                        className="gap-2"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Assign Nation
-                      </Button>
+                      <PermissionGate require="hierarchy.states.assign-nation">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAssign(state)}
+                          className="gap-2"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Assign Nation
+                        </Button>
+                      </PermissionGate>
                     </TableCell>
                   </TableRow>
                 ))

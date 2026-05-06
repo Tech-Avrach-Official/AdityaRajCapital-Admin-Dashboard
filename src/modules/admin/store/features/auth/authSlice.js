@@ -1,114 +1,119 @@
-// Auth Slice - Authentication state management
-// Handles login, logout, and auth state persistence
+// Auth Slice — staff RBAC state
+// Holds the decoded staff identity, permissions, and scope from the JWT.
 
 import { createSlice } from "@reduxjs/toolkit"
-import { loginAdmin, logoutAdmin, checkAuthStatus } from "./authThunks"
+import { loginAdmin, loginLegacyAdmin, logoutAdmin, checkAuthStatus } from "./authThunks"
 
-/**
- * Initial auth state
- */
 const initialState = {
-  // User information
-  user: null,
-  adminId: null,
-  
-  // JWT token
+  staff: null, // { id, role, name, email }
+  role: null,
+  permissions: [],
+  scope: { nations: [], states: [], branches: [] },
   token: null,
-  
-  // Auth status
+  tokenExp: null,
   isAuthenticated: false,
-  
-  // Loading states
   loading: false,
-  checkingAuth: true, // True on initial load while checking localStorage
-  
-  // Error state
+  checkingAuth: true,
   error: null,
 }
 
-/**
- * Auth Slice
- */
+const applyAuth = (state, payload) => {
+  state.loading = false
+  state.checkingAuth = false
+  state.isAuthenticated = true
+  state.staff = payload.staff
+  state.role = payload.role
+  state.permissions = payload.permissions || []
+  state.scope = payload.scope || { nations: [], states: [], branches: [] }
+  state.token = payload.token
+  state.tokenExp = payload.tokenExp ?? null
+  state.error = null
+}
+
+const clearAuth = (state) => {
+  state.staff = null
+  state.role = null
+  state.permissions = []
+  state.scope = { nations: [], states: [], branches: [] }
+  state.token = null
+  state.tokenExp = null
+  state.isAuthenticated = false
+  state.loading = false
+  state.error = null
+}
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // Clear error
     clearAuthError: (state) => {
       state.error = null
     },
-    
-    // Set auth checking complete
     setAuthCheckComplete: (state) => {
       state.checkingAuth = false
     },
-    
-    // Reset auth state
     resetAuth: () => initialState,
+    // Used by My Profile save to refresh the in-memory staff name/email/mobile.
+    setStaffProfile: (state, action) => {
+      if (state.staff) {
+        state.staff = { ...state.staff, ...action.payload }
+      }
+    },
   },
   extraReducers: (builder) => {
-    // ============ Login ============
     builder
       .addCase(loginAdmin.pending, (state) => {
         state.loading = true
         state.error = null
       })
       .addCase(loginAdmin.fulfilled, (state, action) => {
-        state.loading = false
-        state.isAuthenticated = true
-        state.token = action.payload.token
-        state.adminId = action.payload.admin_id
-        state.user = { admin_id: action.payload.admin_id }
-        state.error = null
-        state.checkingAuth = false
+        applyAuth(state, action.payload)
       })
       .addCase(loginAdmin.rejected, (state, action) => {
-        state.loading = false
-        state.isAuthenticated = false
-        state.token = null
-        state.adminId = null
-        state.user = null
-        state.error = action.payload || "Login failed"
+        clearAuth(state)
         state.checkingAuth = false
+        state.error = action.payload || "Login failed"
       })
-    
-    // ============ Logout ============
+
     builder
-      .addCase(logoutAdmin.fulfilled, (state) => {
-        state.isAuthenticated = false
-        state.token = null
-        state.adminId = null
-        state.user = null
+      .addCase(loginLegacyAdmin.pending, (state) => {
+        state.loading = true
         state.error = null
-        state.loading = false
       })
-    
-    // ============ Check Auth Status ============
+      .addCase(loginLegacyAdmin.fulfilled, (state, action) => {
+        applyAuth(state, action.payload)
+      })
+      .addCase(loginLegacyAdmin.rejected, (state, action) => {
+        clearAuth(state)
+        state.checkingAuth = false
+        state.error = action.payload || "Login failed"
+      })
+
+    builder.addCase(logoutAdmin.fulfilled, (state) => {
+      clearAuth(state)
+      state.checkingAuth = false
+    })
+
     builder
       .addCase(checkAuthStatus.pending, (state) => {
         state.checkingAuth = true
       })
       .addCase(checkAuthStatus.fulfilled, (state, action) => {
-        state.checkingAuth = false
         if (action.payload) {
-          state.isAuthenticated = true
-          state.token = action.payload.token
-          state.adminId = action.payload.adminId
-          state.user = { admin_id: action.payload.adminId }
+          applyAuth(state, action.payload)
+        } else {
+          clearAuth(state)
+          state.checkingAuth = false
         }
       })
       .addCase(checkAuthStatus.rejected, (state) => {
+        clearAuth(state)
         state.checkingAuth = false
-        state.isAuthenticated = false
-        state.token = null
-        state.adminId = null
-        state.user = null
       })
   },
 })
 
-// Export actions
-export const { clearAuthError, setAuthCheckComplete, resetAuth } = authSlice.actions
+export const { clearAuthError, setAuthCheckComplete, resetAuth, setStaffProfile } =
+  authSlice.actions
 
-// Export reducer
 export default authSlice.reducer

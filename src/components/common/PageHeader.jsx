@@ -10,6 +10,9 @@ const PageHeader = ({
   actionLabel,
   actionHref,
   onActionClick,
+  // Optional gate from caller. When false, the action button is hidden.
+  // Defaults to true so existing callers keep their current behavior.
+  showAction = true,
   className,
 }) => {
   return (
@@ -21,7 +24,7 @@ const PageHeader = ({
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
           )}
         </div>
-        {action &&
+        {action && showAction &&
           (actionHref ? (
             <Button asChild size="default">
               <Link to={actionHref}>{actionLabel || action}</Link>

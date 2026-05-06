@@ -32,8 +32,11 @@ import {
 } from "@/components/ui/select"
 import { hierarchyService } from "@/modules/admin/api/services/hierarchyService"
 import { handleApiError } from "@/lib/utils/errorHandler"
+import { useHasPermission } from "@/modules/admin/hooks"
+import PermissionGate from "@/modules/admin/components/PermissionGate"
 
 const BranchesPage = () => {
+  const canCreateBranch = useHasPermission("hierarchy.branches.create")
   const [branches, setBranches] = useState([])
   const [states, setStates] = useState([])
   const [nations, setNations] = useState([])
@@ -179,6 +182,7 @@ const BranchesPage = () => {
         description="Manage branches under each state. RMs are assigned to a branch."
         action="Add Branch"
         onActionClick={openAdd}
+        showAction={canCreateBranch}
       />
 
       {/* Filters */}
@@ -252,22 +256,26 @@ const BranchesPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(branch)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDelete(branch)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <PermissionGate require="hierarchy.branches.update">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(branch)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
+                        <PermissionGate require="hierarchy.branches.delete">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDelete(branch)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
                       </div>
                     </TableCell>
                   </TableRow>

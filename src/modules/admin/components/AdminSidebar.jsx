@@ -22,11 +22,21 @@ import {
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { useAppSelector } from "@/store"
+import {
+  selectIsSuperAdmin,
+  selectPermissions,
+} from "@/modules/admin/store/features/auth/authSelectors"
+import { hasPermission } from "@/modules/admin/lib/permissions"
 
 const AdminSidebar = ({ onMobileClose }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [openSubMenu, setOpenSubMenu] = useState(null)
   const location = useLocation()
+  const isSuperAdmin = useAppSelector(selectIsSuperAdmin)
+  const permissions = useAppSelector(selectPermissions)
+  const isAllowed = (perm) =>
+    !perm || isSuperAdmin || hasPermission(permissions, perm)
 
   // Auto-expand submenu if current path matches
   useEffect(() => {
@@ -42,12 +52,13 @@ const AdminSidebar = ({ onMobileClose }) => {
     })
   }, [location.pathname])
 
-  const menuItems = [
+  const allMenuItems = [
     {
       id: "dashboard",
       name: "Dashboard",
       icon: LayoutDashboard,
       path: "/admin",
+      permission: "dashboard.view",
     },
     {
       id: "hierarchy",
@@ -59,18 +70,56 @@ const AdminSidebar = ({ onMobileClose }) => {
           name: "Nations",
           path: "/admin/hierarchy/nations",
           icon: Globe,
+          permission: "hierarchy.nations.view",
         },
         {
           id: "states",
           name: "States",
           path: "/admin/hierarchy/states",
           icon: MapPin,
+          permission: "hierarchy.states.view",
         },
         {
           id: "branches",
           name: "Branches",
           path: "/admin/hierarchy/branches",
           icon: Building2,
+          permission: "hierarchy.branches.view",
+        },
+      ],
+    },
+    {
+      id: "staff",
+      name: "Staff Management",
+      icon: UserCog,
+      subItems: [
+        {
+          id: "staff-admins",
+          name: "Admins",
+          path: "/admin/staff/admins",
+          icon: UserCog,
+          permission: "staff.admin.view",
+        },
+        {
+          id: "staff-nation-heads",
+          name: "Nation Heads",
+          path: "/admin/staff/nation-heads",
+          icon: Globe,
+          permission: "staff.nation-head.view",
+        },
+        {
+          id: "staff-state-heads",
+          name: "State Heads",
+          path: "/admin/staff/state-heads",
+          icon: MapPin,
+          permission: "staff.state-head.view",
+        },
+        {
+          id: "staff-branch-heads",
+          name: "Branch Heads",
+          path: "/admin/staff/branch-heads",
+          icon: Building2,
+          permission: "staff.branch-head.view",
         },
       ],
     },
@@ -84,24 +133,28 @@ const AdminSidebar = ({ onMobileClose }) => {
           name: "Relationship Managers",
           path: "/admin/users/rms",
           icon: UserCog,
+          permission: "rms.view",
         },
         {
           id: "partners",
           name: "Partners",
           path: "/admin/users/partners",
           icon: Handshake,
+          permission: "partners.view",
         },
         {
           id: "investors",
           name: "Investors",
           path: "/admin/users/investors",
           icon: Users,
+          permission: "investors.view",
         },
         {
           id: "deletion-requests",
           name: "Deletion Requests",
           path: "/admin/users/deletion-requests",
           icon: FileText,
+          permission: "deletion-requests.view",
         },
       ],
     },
@@ -110,6 +163,7 @@ const AdminSidebar = ({ onMobileClose }) => {
       name: "Plans",
       icon: Package,
       path: "/admin/plans",
+      permission: "plans.view",
     },
     {
       id: "financial",
@@ -121,24 +175,28 @@ const AdminSidebar = ({ onMobileClose }) => {
           name: "Investments",
           path: "/admin/financial/investments",
           icon: TrendingUp,
+          permission: "investments.view",
         },
         {
           id: "payouts",
           name: "Payouts",
           path: "/admin/financial/payouts",
           icon: Wallet,
+          permission: "payouts.view",
         },
         {
           id: "commissions",
           name: "Commissions",
           path: "/admin/financial/commissions",
           icon: Percent,
+          permission: "commissions.view",
         },
         {
           id: "payment-verification",
           name: "Payment Verification",
           path: "/admin/financial/payment-verification",
           icon: CreditCard,
+          permission: "purchases.view",
         },
       ],
     },
@@ -147,14 +205,30 @@ const AdminSidebar = ({ onMobileClose }) => {
       name: "System Configuration",
       icon: Settings,
       path: "/admin/settings",
+      permission: "tds-settings.view",
     },
     {
       id: "audit",
       name: "Audit & Compliance",
       icon: FileText,
       path: "/admin/audit",
+      // No catalog key for audit yet — gate to super_admin only.
+      permission: null,
+      superAdminOnly: true,
     },
   ]
+
+  const menuItems = allMenuItems
+    .map((item) => {
+      if (item.subItems) {
+        const visibleSubs = item.subItems.filter((sub) => isAllowed(sub.permission))
+        if (visibleSubs.length === 0) return null
+        return { ...item, subItems: visibleSubs }
+      }
+      if (item.superAdminOnly && !isSuperAdmin) return null
+      return isAllowed(item.permission) ? item : null
+    })
+    .filter(Boolean)
 
   const toggleSubMenu = (id) => {
     if (!sidebarOpen) {

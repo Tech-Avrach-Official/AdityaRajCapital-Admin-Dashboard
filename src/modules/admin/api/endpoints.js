@@ -1,6 +1,18 @@
 // API Endpoints constants (Admin module)
 
 export const endpoints = {
+  staff: {
+    login: "/api/staff/login",
+    list: (rolePlural) => `/api/admin/staff/${rolePlural}`,
+    get: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}`,
+    create: (rolePlural) => `/api/admin/staff/${rolePlural}`,
+    update: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}`,
+    delete: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}`,
+    scope: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}/scope`,
+    permissions: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}/permissions`,
+    status: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}/status`,
+    resetPassword: (rolePlural, id) => `/api/admin/staff/${rolePlural}/${id}/reset-password`,
+  },
   admin: {
     login: "/api/admin/login",
     getInvestor: (investorId) => `/api/admin/investors/${investorId}`,

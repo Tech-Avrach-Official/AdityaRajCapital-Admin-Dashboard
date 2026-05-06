@@ -34,6 +34,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { plansService } from "@/modules/admin/api/services/plansService"
 import { handleApiError } from "@/lib/utils/errorHandler"
+import { useHasPermission } from "@/modules/admin/hooks"
+import PermissionGate from "@/modules/admin/components/PermissionGate"
 import DeletePlanModal from "./components/DeletePlanModal"
 
 const formatCurrency = (amount) => {
@@ -47,6 +49,7 @@ const formatCurrency = (amount) => {
 
 const PlansListPage = () => {
   const navigate = useNavigate()
+  const canCreatePlan = useHasPermission("plans.create")
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -241,33 +244,39 @@ const PlansListPage = () => {
                   <Eye className="mr-2 h-4 w-4" />
                   View
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate(`/admin/plans/${plan.id}/edit`)}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
+                <PermissionGate require="plans.update">
+                  <DropdownMenuItem
+                    onClick={() => navigate(`/admin/plans/${plan.id}/edit`)}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </PermissionGate>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => handleToggleActive(plan)}
-                  disabled={isToggling}
-                >
-                  {isToggling ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : isActive ? (
-                    <PowerOff className="mr-2 h-4 w-4" />
-                  ) : (
-                    <Power className="mr-2 h-4 w-4" />
-                  )}
-                  {isToggling ? "Updating…" : isActive ? "Deactivate" : "Activate"}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setDeleteModalPlan(plan)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                <PermissionGate require="plans.update">
+                  <DropdownMenuItem
+                    onClick={() => handleToggleActive(plan)}
+                    disabled={isToggling}
+                  >
+                    {isToggling ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : isActive ? (
+                      <PowerOff className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Power className="mr-2 h-4 w-4" />
+                    )}
+                    {isToggling ? "Updating…" : isActive ? "Deactivate" : "Activate"}
+                  </DropdownMenuItem>
+                </PermissionGate>
+                <PermissionGate require="plans.delete">
+                  <DropdownMenuItem
+                    onClick={() => setDeleteModalPlan(plan)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </PermissionGate>
               </DropdownMenuContent>
             </DropdownMenu>
           )
@@ -304,6 +313,7 @@ const PlansListPage = () => {
           </>
         }
         onActionClick={() => navigate("/admin/plans/new")}
+        showAction={canCreatePlan}
       />
 
       <div className="flex flex-wrap items-center justify-end gap-2">

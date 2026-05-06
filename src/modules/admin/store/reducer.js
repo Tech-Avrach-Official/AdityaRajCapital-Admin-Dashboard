@@ -9,6 +9,7 @@ import kycReducer from "./features/kyc/kycSlice"
 import dashboardReducer from "./features/dashboard/dashboardSlice"
 import uiReducer from "./features/ui/uiSlice"
 import purchasesReducer from "./features/purchases/purchaseSlice"
+import staffReducer from "./features/staff/staffSlice"
 
 export default combineReducers({
   auth: authReducer,
@@ -21,4 +22,5 @@ export default combineReducers({
   dashboard: dashboardReducer,
   ui: uiReducer,
   purchases: purchasesReducer,
+  staff: staffReducer,
 })

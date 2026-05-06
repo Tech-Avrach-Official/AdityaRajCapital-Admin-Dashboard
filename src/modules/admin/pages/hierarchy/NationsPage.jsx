@@ -23,10 +23,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useHasPermission } from "@/modules/admin/hooks"
+import PermissionGate from "@/modules/admin/components/PermissionGate"
 import { hierarchyService } from "@/modules/admin/api/services/hierarchyService"
 import { handleApiError } from "@/lib/utils/errorHandler"
 
 const NationsPage = () => {
+  const canCreateNation = useHasPermission("hierarchy.nations.create")
   const [nations, setNations] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -129,6 +132,7 @@ const NationsPage = () => {
         description="Manage nations (e.g. North, South, Center). Assign states to nations from the States page."
         action="Add Nation"
         onActionClick={openAdd}
+        showAction={canCreateNation}
       />
 
       {loading ? (
@@ -165,22 +169,26 @@ const NationsPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(nation)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDelete(nation)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <PermissionGate require="hierarchy.nations.update">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(nation)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
+                        <PermissionGate require="hierarchy.nations.delete">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDelete(nation)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -11,11 +11,12 @@ import RMsTable from "./components/RMsTable"
 import EditRMModal from "./components/EditRMModal"
 import AssignPartnersModal from "./components/AssignPartnersModal"
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal"
-import { useRMs } from "@/modules/admin/hooks"
+import { useRMs, useHasPermission } from "@/modules/admin/hooks"
 import { hierarchyService } from "@/modules/admin/api/services/hierarchyService"
 
 const RMsPage = () => {
   const navigate = useNavigate()
+  const canCreateRM = useHasPermission("rms.create")
   // Redux state and actions
   const {
     rms,
@@ -279,6 +280,7 @@ const RMsPage = () => {
         title="Relationship Managers"
         action="Create RM"
         actionHref="/admin/users/rms/new"
+        showAction={canCreateRM}
       />
 
       <div className="flex flex-wrap items-center gap-4 justify-between">

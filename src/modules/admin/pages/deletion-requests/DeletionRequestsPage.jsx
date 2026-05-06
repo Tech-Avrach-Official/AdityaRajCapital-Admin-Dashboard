@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "react-hot-toast"
 import { Eye, RefreshCw } from "lucide-react"
 import PageHeader from "@/components/common/PageHeader"
+import PermissionGate from "@/modules/admin/components/PermissionGate"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -306,14 +307,16 @@ const DeletionRequestsPage = () => {
                             <Eye className="h-4 w-4" />
                             View
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => openConfirm(tab, r)}
-                            disabled={!picked.id}
-                          >
-                            Process
-                          </Button>
+                          <PermissionGate require="deletion-requests.process">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => openConfirm(tab, r)}
+                              disabled={!picked.id}
+                            >
+                              Process
+                            </Button>
+                          </PermissionGate>
                         </div>
                       </TableCell>
                     </TableRow>
