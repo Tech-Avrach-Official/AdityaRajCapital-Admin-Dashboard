@@ -4,6 +4,7 @@ import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-tabl
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
 import { Eye, ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
@@ -133,55 +134,32 @@ const InvestmentsPage = () => {
       toast.error("No investments to export")
       return
     }
-    const escapeCsvCell = (val) => {
-      const s = String(val ?? "")
-      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-        return `"${s.replace(/"/g, '""')}"`
-      }
-      return s
-    }
     const headers = [
       "Investment ID",
       "Investor",
       "Plan",
-      "Amount",
+      "Amount (\u20b9)",
       "Date",
       "Status",
-      "Total received",
-      "Next payout",
+      "Total received (\u20b9)",
+      "Next payout (\u20b9)",
     ]
     const rows = investments.map((inv) => {
-      const invName = inv.investor?.name ?? "—"
-      const planName = inv.plan?.name ?? "—"
       const d = inv.payment_verified_at ?? inv.created_at
-      const dateStr = formatDateOnly(d)
-      const totalRec = inv.investment_return?.total_received_display ?? (inv.investment_return?.total_received != null ? formatCurrency(inv.investment_return.total_received) : "—")
       const np = inv.next_payout
-      const nextPayoutStr = np
-        ? (np.payout_date_from != null && np.payout_date_to != null
-          ? `${np.payout_date_from} – ${np.payout_date_to}`
-          : np.payout_date_from ?? np.payout_date_to ?? inv.next_payout_date ?? "—")
-        : "—"
+      const nextPayoutAmt = np ? (np.receivable_amount ?? np.amount ?? 0) : 0
       return [
         inv.investment_display_id ?? inv.id ?? "",
-        invName,
-        planName,
-        formatCurrency(inv.amount),
-        dateStr,
+        inv.investor?.name ?? "\u2014",
+        inv.plan?.name ?? "\u2014",
+        String(inv.amount ?? ""),
+        formatDateOnly(d),
         inv.status ?? "",
-        totalRec,
-        nextPayoutStr,
+        String(inv.investment_return?.total_received ?? ""),
+        String(nextPayoutAmt),
       ]
     })
-    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
-    const csv = "\uFEFF" + csvRows.join("\r\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `investments-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportToCsv(headers, rows, `investments-export-${format(new Date(), "yyyy-MM-dd")}`)
     toast.success("Investments exported successfully")
   }
 

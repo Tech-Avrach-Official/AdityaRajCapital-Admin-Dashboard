@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
 import { ChevronLeft, ChevronRight, Upload, Download } from "lucide-react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
 import {
@@ -135,58 +136,52 @@ const CommissionsPage = () => {
       toast.error("No commissions to export")
       return
     }
-    const escapeCsvCell = (val) => {
-      const s = String(val ?? "")
-      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-        return `"${s.replace(/"/g, '""')}"`
-      }
-      return s
-    }
     const headers = [
       "Commission ID",
       "Type",
       "Payee",
       "Investment ID",
-      "Amount",
+      "Amount (\u20b9)",
       "TDS %",
-      "Receivable",
-      "Due window",
-      "Payment timing",
+      "Receivable Amount (\u20b9)",
+      "Due Window",
+      "Payment Timing",
+      "Status",
       "Branch",
-      "Bank (holder)",
-      "Bank name",
-      "Account number",
+      "Branch State",
+      "Bank Holder Name",
+      "Bank Name",
+      "Account Number",
+      "IFSC",
     ]
     const rows = commissions.map((c) => {
       const b = c.branch
-      const branchName = b ? (b.name ?? "") : ""
       const bank = c.bank_account
       const tdsPct = c.tds_percent != null ? `${c.tds_percent}%` : ""
       return [
         String(c.commission_id ?? c.id ?? ""),
         c.type ?? "",
         c.payee_name ?? "",
-        c.investment_display_id ?? c.investment_id ?? "",
-        formatCurrency(c.amount),
+        String(c.investment_display_id ?? c.investment_id ?? ""),
+        String(c.amount ?? ""),
         tdsPct,
-        formatCurrency(c.receivable_amount),
+        String(c.receivable_amount ?? ""),
         c.due_window_label ?? "",
-        c.payment_timing ?? c.status ?? "",
-        branchName,
+        c.payment_timing ?? "",
+        c.status ?? "",
+        b?.name ?? "",
+        b?.state_name ?? "",
         bank?.account_holder_name ?? "",
         bank?.bank_name ?? "",
         bank?.account_number ?? "",
+        bank?.ifsc ?? "",
       ]
     })
-    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
-    const csv = "\uFEFF" + csvRows.join("\r\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `commissions-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportToCsv(
+      headers,
+      rows,
+      `commissions-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}`
+    )
     toast.success("Commissions exported successfully")
   }
 

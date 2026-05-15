@@ -3,6 +3,7 @@ import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-tabl
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
 import { Eye, CheckCircle, XCircle, CreditCard, IndianRupee, Loader2, Download } from "lucide-react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
 import MetricCard from "@/components/common/MetricCard"
@@ -265,21 +266,16 @@ const PaymentVerificationPage = () => {
       toast.error("No payments to export")
       return
     }
-    const escapeCsvCell = (val) => {
-      const s = String(val ?? "")
-      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-        return `"${s.replace(/"/g, '""')}"`
-      }
-      return s
-    }
     const headers = [
       "Purchase ID",
       "Investor ID",
       "Investor Name",
       "Investor Email",
       "Plan Name",
-      "Amount",
-      "Uploaded At",
+      "Amount (\u20b9)",
+      "Cheque / Reference No.",
+      "Payment Status",
+      "Proof Uploaded At",
     ]
     const rows = filteredPurchases.map((p) => [
       String(p.id ?? ""),
@@ -287,20 +283,18 @@ const PaymentVerificationPage = () => {
       p.investor_name ?? "",
       p.investor_email ?? "",
       p.plan_name ?? "",
-      formatINR(p.amount),
+      String(p.amount ?? ""),
+      p.cheque_number ?? p.reference_number ?? "",
+      p.status ?? "",
       p.payment_proof_uploaded_at
         ? format(new Date(p.payment_proof_uploaded_at), "yyyy-MM-dd HH:mm")
         : "",
     ])
-    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
-    const csv = "\uFEFF" + csvRows.join("\r\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `payment-verification-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportToCsv(
+      headers,
+      rows,
+      `payment-verification-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}`
+    )
     toast.success("Payments exported successfully")
   }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, Download, X, Eye } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { exportToCsv } from "@/lib/utils/exportCsv";
 import {
   useReactTable,
   getCoreRowModel,
@@ -104,43 +105,34 @@ const Investor = () => {
       toast.error("No investors to export");
       return;
     }
-
     const headers = [
       "Client ID",
       "Name",
-      // "Email",
+      "Email",
       "Mobile",
+      "Referral Code",
+      "Source",
       "Status",
-      "KYC",
-      "Commission Earned",
-      "Created At",
-      "Action",
+      "KYC Status",
+      "RM Commission (\u20b9)",
+      "Registered On",
     ];
-
     const rows = filteredInvestors.map((i) => [
-      i.client_id,
-      i.name,
-      // i.email,
-      i.mobile,
-      i.status,
+      i.client_id ?? "",
+      i.name ?? "",
+      i.email ?? "",
+      i.mobile ?? "",
+      i.referral_code ?? "",
+      i.rm_id ? "RM" : i.partner_id ? "Partner" : "Direct",
+      i.status ?? "",
       i.kyc_complete ? "Complete" : "Pending",
-      i.commission_earned,
-      i.created_at,
+      String(i.commission_earned ?? ""),
+      i.created_at
+        ? new Date(i.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" })
+        : "",
     ]);
-
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = "investors.csv";
-    a.click();
-
-    URL.revokeObjectURL(url);
+    exportToCsv(headers, rows, `rm-investors-export-${new Date().toISOString().slice(0, 10)}`);
+    toast.success("Investors exported successfully");
   };
 
   const columns = useMemo(

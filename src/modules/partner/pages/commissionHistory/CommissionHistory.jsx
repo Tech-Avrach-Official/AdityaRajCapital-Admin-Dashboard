@@ -13,6 +13,9 @@ import {
   Percent,
   Download,
 } from "lucide-react"
+import { toast } from "react-hot-toast"
+import { format } from "date-fns"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 
 import {
   Table,
@@ -193,7 +196,32 @@ export default function CommissionHistory() {
   const pendingCount = list.filter((i) => i.status === "pending").length
 
   const handleExport = () => {
-    console.log("Export commission history")
+    if (!list.length) {
+      toast.error("No commission records to export")
+      return
+    }
+    const headers = [
+      "Investment ID",
+      "Due Window",
+      "Gross Amount (\u20b9)",
+      "TDS (\u20b9)",
+      "TDS %",
+      "Net Receivable (\u20b9)",
+      "Status",
+      "Paid At",
+    ]
+    const rows = list.map((item) => [
+      item.investment_display_id ?? "",
+      item.due_window_label ?? "",
+      String(item.amount ?? 0),
+      String(item.tds_amount ?? 0),
+      String(item.tds_percent ?? 0),
+      String(item.amount_receivable ?? 0),
+      item.status ?? "",
+      item.paid_at ? format(new Date(item.paid_at), "yyyy-MM-dd") : "",
+    ])
+    exportToCsv(headers, rows, `partner-commissions-${format(new Date(), "yyyy-MM-dd")}`)
+    toast.success("Commission history exported successfully")
   }
 
   return (

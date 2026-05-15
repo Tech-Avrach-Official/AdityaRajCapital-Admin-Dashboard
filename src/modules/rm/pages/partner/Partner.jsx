@@ -3,6 +3,7 @@ import { Download, Eye, Search, X } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { useNavigate } from "react-router-dom"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
@@ -109,54 +110,36 @@ const Partners = () => {
   }
 
   const handleExport = () => {
-
     if (!filteredPartners.length) {
-
       toast.error("No partners to export")
       return
-
     }
-
     const headers = [
       "Name",
       "Email",
       "Mobile",
       "Status",
-      "Total Commission",
-      "Investor Commission",
+      "Total Commission (\u20b9)",
+      "Investor Commission (\u20b9)",
       "Created At",
     ]
-
     const rows = filteredPartners.map((p) => [
-
-      p.name,
-      p.email,
-      p.mobile,
-      p.status,
-      p.commission_earned,
-      p.rm_commission_earned_from_their_investors,
-      new Date(p.created_at).toLocaleDateString("en-IN")
-
+      p.name ?? "",
+      p.email ?? "",
+      p.mobile ?? "",
+      p.status ?? "",
+      String(p.commission_earned ?? ""),
+      String(p.rm_commission_earned_from_their_investors ?? ""),
+      p.created_at
+        ? new Date(p.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" })
+        : "",
     ])
-
-    const csvContent =
-      [headers, ...rows]
-        .map((row) => row.join(","))
-        .join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-
-    const url = URL.createObjectURL(blob)
-
-    const link = document.createElement("a")
-
-    link.href = url
-    link.setAttribute("download", "partners.csv")
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
+    exportToCsv(
+      headers,
+      rows,
+      `rm-partners-export-${new Date().toISOString().slice(0, 10)}`
+    )
+    toast.success("Partners exported successfully")
   }
 
   const columns = useMemo(() => [

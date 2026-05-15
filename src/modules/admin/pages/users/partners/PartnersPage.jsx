@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { Eye, Download, Search, X } from "lucide-react"
 import { toast } from "react-hot-toast"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import PageHeader from "@/components/common/PageHeader"
 import {
   Table,
@@ -107,14 +108,16 @@ const PartnersPage = () => {
       "Branch",
       "Referral RM",
       "KYC Status",
+      "Account Status",
       "Total Investors",
-      "Total Commission",
+      "Total Commission (\u20b9)",
       "Created At",
     ]
     const rows = data.map((p) => {
       const branchName = p.branch?.name ?? p.branch_name ?? ""
       const rmName = p.rm?.rm_name ?? p.rmName ?? ""
       const kycStatus = p.kyc_status ?? ""
+      const acctStatus = p.status ?? ""
       const totalInvestors =
         p.referral_summary?.referred_investors_count ?? p.investorsCount ?? 0
       const totalCommission = p.total_commission ?? p.totalCommission ?? 0
@@ -122,7 +125,6 @@ const PartnersPage = () => {
       const createdFormatted = createdAt
         ? new Date(createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })
         : ""
-      const commissionFormatted = formatCurrency(totalCommission)
       return [
         p.partner_referral_code ?? p.referral_code ?? "",
         p.name ?? "",
@@ -131,27 +133,17 @@ const PartnersPage = () => {
         branchName,
         rmName,
         kycStatus,
+        acctStatus,
         String(totalInvestors),
-        commissionFormatted,
+        String(totalCommission),
         createdFormatted,
       ]
     })
-    const escapeCsvCell = (val) => {
-      const s = String(val ?? "")
-      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-        return `"${s.replace(/"/g, '""')}"`
-      }
-      return s
-    }
-    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
-    const csv = "\uFEFF" + csvRows.join("\r\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `partners-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportToCsv(
+      headers,
+      rows,
+      `partners-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}`
+    )
     toast.success("Partners exported successfully")
   }
 

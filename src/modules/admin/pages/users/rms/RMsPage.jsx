@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
 import { Download } from "lucide-react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
 import { Button } from "@/components/ui/button"
@@ -127,13 +128,6 @@ const RMsPage = () => {
       toast.error("No RMs to export")
       return
     }
-    const escapeCsvCell = (val) => {
-      const s = String(val ?? "")
-      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-        return `"${s.replace(/"/g, '""')}"`
-      }
-      return s
-    }
     const headers = [
       "RM Code",
       "Name",
@@ -148,29 +142,27 @@ const RMsPage = () => {
     ]
     const rows = data.map((r) => {
       const created = r.created_at || r.createdDate
-      const createdStr = created ? (() => { try { return format(new Date(created), "dd MMM yyyy") } catch { return created } })() : ""
+      const createdStr = created
+        ? (() => { try { return format(new Date(created), "dd MMM yyyy") } catch { return created } })()
+        : ""
       return [
         r.rm_code ?? r.referralCode ?? "",
         r.name ?? "",
         r.email ?? "",
         r.phone_number ?? r.mobile ?? "",
-        r.branch_name ?? "—",
-        r.state_name ?? "—",
-        r.nation_name ?? "—",
+        r.branch_name ?? "",
+        r.state_name ?? "",
+        r.nation_name ?? "",
         String(r.partner_count ?? r.partnersCount ?? 0),
         r.status ?? "",
         createdStr,
       ]
     })
-    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
-    const csv = "\uFEFF" + csvRows.join("\r\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `rms-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportToCsv(
+      headers,
+      rows,
+      `rms-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}`
+    )
     toast.success("RMs exported successfully")
   }
 

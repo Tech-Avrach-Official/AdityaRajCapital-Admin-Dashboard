@@ -3,7 +3,7 @@ import { useMemo } from "react"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
-import { Download } from "lucide-react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import PageHeader from "@/components/common/PageHeader"
 import FilterBar from "@/components/common/FilterBar"
 import StatusBadge from "@/components/common/StatusBadge"
@@ -53,7 +53,34 @@ const AuditPage = () => {
   }
 
   const handleExport = () => {
-    toast.info("Export functionality - To be implemented")
+    if (!auditLogs.length) {
+      toast.error("No audit logs to export")
+      return
+    }
+    const headers = [
+      "Timestamp",
+      "User",
+      "Role",
+      "Action",
+      "Entity",
+      "Entity ID",
+      "IP Address",
+      "Status",
+      "Details",
+    ]
+    const rows = auditLogs.map((log) => [
+      format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss"),
+      log.user ?? "",
+      log.role ?? "",
+      log.action ?? "",
+      log.entity ?? "",
+      log.entityId ?? "",
+      log.ipAddress ?? "",
+      log.status ?? "",
+      JSON.stringify(log.details ?? {}),
+    ])
+    exportToCsv(headers, rows, `audit-trail-${format(new Date(), "yyyy-MM-dd")}`)
+    toast.success("Audit logs exported successfully")
   }
 
   const columns = useMemo(

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import { useNavigate } from "react-router-dom"
 import {
   useReactTable,
@@ -149,39 +150,43 @@ const InvestorsPage = () => {
   const handleExport = () => {
     setExporting(true)
     setTimeout(() => {
-      const headers = [
-        "Client ID",
-        "Name",
-        "Branch",
-        "Referral",
-        "KYC",
-        "Total Invested",
-        "Verified Count",
-        "Last Verified",
-        "Created",
-      ]
-      const rows = filteredInvestors.map((i) =>
-        [
-          i.client_id,
-          i.name,
+      try {
+        const headers = [
+          "Client ID",
+          "Name",
+          "Email",
+          "Branch",
+          "Referral",
+          "Referral Type",
+          "KYC Status",
+          "Total Invested (₹)",
+          "Verified Count",
+          "Last Verified",
+          "Registered On",
+        ]
+        const rows = filteredInvestors.map((i) => [
+          i.client_id ?? "",
+          i.name ?? "",
+          i.email ?? "",
           i.branch_name ?? "",
-          i.referral,
-          i.kyc_status,
+          i.referral ?? "",
+          i.referral_type ?? "",
+          i.kyc_status ?? "",
           i.total_invested ?? "",
           i.verified_count ?? "",
-          i.last_verified ?? "",
-          i.created ?? "",
-        ].join(",")
-      )
-      const csv = [headers.join(","), ...rows].join("\n")
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `investors-${new Date().toISOString().slice(0, 10)}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-      setExporting(false)
+          i.last_verified ? new Date(i.last_verified).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "",
+          // filters use `created_at ?? created`; use same fallback here so the column is consistent
+          (i.created_at ?? i.created)
+            ? new Date(i.created_at ?? i.created).toLocaleDateString("en-IN", { dateStyle: "medium" })
+            : "",
+        ])
+        exportToCsv(headers, rows, `investors-${new Date().toISOString().slice(0, 10)}`)
+        toast.success("Investors exported successfully")
+      } catch {
+        toast.error("Export failed")
+      } finally {
+        setExporting(false)
+      }
     }, 400)
   }
 

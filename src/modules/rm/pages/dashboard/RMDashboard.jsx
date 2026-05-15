@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { Users, Percent, Wallet, Clock, RefreshCw, TrendingUp, BadgeIndianRupee, Download } from "lucide-react"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -62,42 +63,24 @@ const RMDashboard = () => {
   const [report, setReport] = useState(null)
 
   const handleExport = (report) => {
+    if (!report) return
 
-  if (!report) return
+    const headers = [
+      "Metric",
+      "Value",
+    ]
 
-  const headers = [
-    "Total Partners",
-    "Total Investors",
-    "Commission Earned",
-    "Receivable Commission",
-    "Pending Commission"
-  ]
+    const rows = [
+      ["Total Partners",              String(report.total_partners ?? 0)],
+      ["Total Investors",             String(report.total_investors ?? 0)],
+      ["Commission Earned (\u20b9)",   String(report.total_commission_earned ?? 0)],
+      ["Receivable Commission (\u20b9)", String(report.total_receivable_commission ?? 0)],
+      ["Pending Commission (\u20b9)",  String(report.total_pending_commission ?? 0)],
+    ]
 
-  const rows = [[
-    report.total_partners ?? 0,
-    report.total_investors ?? 0,
-    report.total_commission_earned ?? 0,
-    report.total_receivable_commission ?? 0,
-    report.total_pending_commission ?? 0
-  ]]
-
-  const csv =
-    [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n")
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-
-  const url = URL.createObjectURL(blob)
-
-  const link = document.createElement("a")
-  link.href = url
-  link.setAttribute("download", "rm-dashboard-report.csv")
-
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
+    exportToCsv(headers, rows, `rm-dashboard-report-${new Date().toISOString().slice(0, 10)}`)
+    toast.success("Dashboard exported successfully")
+  }
   const loadReport = async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true)

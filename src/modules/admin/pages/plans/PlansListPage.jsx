@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import toast from "react-hot-toast"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import {
   MoreHorizontal,
   Eye,
@@ -117,45 +118,38 @@ const PlansListPage = () => {
       toast.error("No plans to export")
       return
     }
-    const escapeCsvCell = (val) => {
-      const s = String(val ?? "")
-      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-        return `"${s.replace(/"/g, '""')}"`
-      }
-      return s
-    }
     const headers = [
       "Order",
-      "Plan name",
+      "Plan Name",
       "Slug",
-      "Min investment",
-      "Partner %",
+      "Min Investment (\u20b9)",
+      "Partner Commission %",
+      "RM Commission %",
       "Status",
     ]
     const rows = plans.map((p) => {
       const min = p.investment_details?.min_investment
-      const minStr = min != null ? formatCurrency(min) : "—"
-      const pct = p.partner_commission?.percent
-      const pctStr = pct != null ? `${pct}%` : "—"
+      const minStr = min != null ? String(min) : ""
+      const partnerPct = p.partner_commission?.percent
+      const partnerPctStr = partnerPct != null ? `${partnerPct}%` : ""
+      const rmPct = p.rm_commission?.percent
+      const rmPctStr = rmPct != null ? `${rmPct}%` : ""
       const statusStr = p.is_active ? "Active" : "Inactive"
       return [
         String(p.display_order ?? 0),
         p.name ?? "",
         p.slug ?? "",
         minStr,
-        pctStr,
+        partnerPctStr,
+        rmPctStr,
         statusStr,
       ]
     })
-    const csvRows = [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.map(escapeCsvCell).join(","))]
-    const csv = "\uFEFF" + csvRows.join("\r\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `plans-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportToCsv(
+      headers,
+      rows,
+      `plans-export-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}`
+    )
     toast.success("Plans exported successfully")
   }
 

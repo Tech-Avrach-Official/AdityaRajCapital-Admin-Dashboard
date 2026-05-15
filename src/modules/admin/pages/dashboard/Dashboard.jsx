@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { format } from "date-fns"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import {
   LineChart,
   Line,
@@ -199,36 +200,88 @@ export default function Dashboard() {
   }
 
   const handleExport = () => {
-    const rows = []
-    rows.push(["Pending payment verification", "Investor", "Plan", "Amount", "Date"])
-    pendingPayments.slice(0, 50).forEach((p) => {
-      rows.push([
-        p.investorName,
-        p.plan,
-        String(p.amount ?? 0),
-        p.date ? format(new Date(p.date), "yyyy-MM-dd") : "",
-      ])
-    })
-    rows.push([])
-    rows.push(["Recent investments", "Investor", "Plan", "Amount", "Date", "Status"])
-    recentPurchases.slice(0, 50).forEach((p) => {
-      rows.push([
-        p.investorName,
-        p.plan,
-        String(p.amount ?? 0),
-        p.date ? format(new Date(p.date), "yyyy-MM-dd") : "",
-        p.status ?? "",
-      ])
-    })
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n")
+    const esc = (val) => {
+      const s = String(val ?? "")
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s
+    }
+
+    const lines = []
+
+    // SECTION 1: Platform Summary
+    lines.push("PLATFORM SUMMARY")
+    lines.push([esc("Metric"), esc("Value")].join(","))
+    const c   = summary?.counts ?? {}
+    const ps  = summary?.purchase_stats ?? {}
+    const byS = ps?.total_amount_by_status ?? {}
+    ;[
+      ["Total Users",           c.total_users ?? 0],
+      ["Investors",             c.investors ?? 0],
+      ["Partners",              c.partners ?? 0],
+      ["Relationship Managers", c.rms ?? 0],
+      ["Nations",               c.nations ?? 0],
+      ["States",                c.states ?? 0],
+      ["Branches",              c.branches ?? 0],
+      ["Total Investment (Rs)", ps.total_amount ?? 0],
+      ["Investment Count",      ps.total_count ?? ps.count ?? 0],
+      ["Active Investments",    ps.active ?? 0],
+      ["Active Amount (Rs)",    byS.active ?? 0],
+      ["Pending Verification",  paymentsToVerify ?? 0],
+      ["Commission Paid (Rs)",  commissionStats?.total_paid ?? 0],
+      ["Payouts Due (This Month)", installmentSummary?.due_this_month_count ?? 0],
+      ["Payout Amount Due (Rs)",   installmentSummary?.due_this_month_amount ?? 0],
+    ].forEach(([m, v]) => lines.push([esc(m), esc(v)].join(",")))
+
+    // SECTION 2: Pending Payment Verifications
+    lines.push("")
+    lines.push("PENDING PAYMENT VERIFICATIONS")
+    lines.push(["Purchase ID", "Investor Name", "Plan", "Amount (Rs)", "Upload Date"].map(esc).join(","))
+    if (pendingPayments.length) {
+      pendingPayments.slice(0, 500).forEach((p) => {
+        const d = p.payment_proof_uploaded_at ?? p.date
+        lines.push([
+          p.id ?? "",
+          p.investor_name ?? p.investorName ?? "",
+          p.plan_name ?? p.plan ?? "",
+          p.amount ?? "",
+          d ? format(new Date(d), "dd MMM yyyy") : "",
+        ].map(esc).join(","))
+      })
+    } else {
+      lines.push(esc("No pending verifications"))
+    }
+
+    // SECTION 3: Recent Investments
+    lines.push("")
+    lines.push("RECENT INVESTMENTS")
+    lines.push(["Purchase ID", "Investor Name", "Plan", "Amount (Rs)", "Date", "Status"].map(esc).join(","))
+    if (recentPurchases.length) {
+      recentPurchases.slice(0, 500).forEach((p) => {
+        const d = p.created_at ?? p.date
+        lines.push([
+          p.id ?? "",
+          p.investor_name ?? p.investorName ?? "",
+          p.plan_name ?? p.plan ?? "",
+          p.amount ?? "",
+          d ? format(new Date(d), "dd MMM yyyy") : "",
+          p.status ?? "",
+        ].map(esc).join(","))
+      })
+    } else {
+      lines.push(esc("No recent investments"))
+    }
+
+    // Single file download
+    const csv  = "\uFEFF" + lines.join("\r\n")
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `dashboard-export-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement("a")
+    a.href     = url
+    a.download = `dashboard-full-export-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success("Export downloaded")
+    toast.success("Dashboard exported successfully")
   }
 
   const counts = summary?.counts ?? {}

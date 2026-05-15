@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react"
-import { Search, Eye } from "lucide-react"
+import { Search, Eye, Download } from "lucide-react"
+import { toast } from "react-hot-toast"
+import { format } from "date-fns"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import { investorService } from "@/modules/partner/api/services/investorService"
 import PageHeader from "@/components/common/PageHeader"
 import StatusBadge from "@/components/common/StatusBadge"
@@ -69,10 +72,49 @@ const [openModal, setOpenModal] = useState(false)
 
 //   console.log("all investors:", investors)
 
+  const handleExport = () => {
+    if (!filtered.length) {
+      toast.error("No investors to export")
+      return
+    }
+    const headers = [
+      "Investor Name",
+      "Client ID",
+      "Email",
+      "Mobile",
+      "Status",
+      "KYC Status",
+      "Total Invested (\u20b9)",
+      "Investment Count",
+    ]
+    const rows = filtered.map((inv) => [
+      inv.name ?? "",
+      inv.client_id ?? "",
+      inv.email ?? "",
+      inv.mobile ?? "",
+      inv.status ?? "",
+      inv.kyc_complete ? "Complete" : "Pending",
+      String(inv.total_invested_amount ?? 0),
+      String(inv.total_investments_count ?? 0),
+    ])
+    exportToCsv(headers, rows, `partner-investors-${format(new Date(), "yyyy-MM-dd")}`)
+    toast.success("Investors exported successfully")
+  }
+
   return (
     <div className="space-y-6">
 
-      <PageHeader title="Investors" />
+      <PageHeader
+        title="Investors"
+        action="Export"
+        onActionClick={handleExport}
+        actionLabel={
+          <>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </>
+        }
+      />
 
       {/* Search */}
       <div className="border rounded-xl p-4 bg-card">

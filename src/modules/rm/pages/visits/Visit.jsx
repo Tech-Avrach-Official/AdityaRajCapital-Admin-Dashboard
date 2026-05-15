@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { visits } from "@/modules/rm/api/services/visits";
 import toast from "react-hot-toast";
+import { exportToCsv } from "@/lib/utils/exportCsv";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,38 +91,21 @@ const Visit = () => {
 
   // EXPORT FUNCTION
   const handleExport = () => {
-
     if (!filtered.length) {
       toast.error("No visits to export");
       return;
     }
-
     const headers = ["Type", "Name", "Mobile", "Date"];
-
     const rows = filtered.map((visit) => [
-      visit.visit_type || "-",
+      visit.visit_type ?? "",
       getName(visit),
       getNumber(visit),
-      new Date(visit.created_at).toLocaleDateString("en-IN"),
+      visit.created_at
+        ? new Date(visit.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" })
+        : "",
     ]);
-
-    const csv =
-      [headers, ...rows]
-        .map((row) => row.join(","))
-        .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.setAttribute("download", "rm-visits.csv");
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportToCsv(headers, rows, `rm-visits-${new Date().toISOString().slice(0, 10)}`);
+    toast.success("Visits exported successfully");
   };
 
   return (

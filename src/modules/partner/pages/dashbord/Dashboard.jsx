@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react"
 import { RefreshCw, Download, Percent, Users, TrendingUp, BarChart3 } from "lucide-react"
 import { format } from "date-fns"
+import { toast } from "react-hot-toast"
+import { exportToCsv } from "@/lib/utils/exportCsv"
 import { useDispatch, useSelector } from "react-redux"
 import { Button } from "@/components/ui/button"
 import {
@@ -67,7 +68,46 @@ export default function Dashboard() {
     }
 
     const handleExport = () => {
-        console.log("Export dashboard data")
+        if (!commissionSummary && !investorSummary) {
+            toast.error("No data to export")
+            return
+        }
+
+        const sections = []
+
+        // Section 1: Commission Summary
+        sections.push(["PARTNER COMMISSION SUMMARY"])
+        sections.push(["Metric", "Value"])
+        sections.push(["Total Commission", String(totalCommission || 0)])
+        sections.push(["Receivable After TDS", String(receivableAfterTDS || 0)])
+        sections.push(["Pending Commission", String(pendingCommission || 0)])
+        sections.push([]) // Spacer
+
+        // Section 2: Investor Summary
+        sections.push(["INVESTOR SUMMARY"])
+        sections.push(["Metric", "Value"])
+        sections.push(["Total Investors", String(totalInvestors || 0)])
+        sections.push(["Active Investors", String(activeInvestors || 0)])
+        sections.push(["Total Invested Amount", String(totalInvestedAmount || 0)])
+        sections.push(["Total No. of Investments", String(totalInvestments || 0)])
+        sections.push([]) // Spacer
+
+        // Section 3: Recent Investors
+        if (investors.length > 0) {
+            sections.push(["RECENT INVESTORS"])
+            sections.push(["Investor Name", "Client ID", "Total Invested", "Join Date"])
+            investors.forEach(inv => {
+                sections.push([
+                    inv.name ?? "",
+                    inv.client_id ?? "",
+                    String(inv.total_invested_amount ?? 0),
+                    inv.created_at ? format(new Date(inv.created_at), "yyyy-MM-dd") : ""
+                ])
+            })
+        }
+
+        exportToCsv([], sections, `partner-dashboard-export-${format(new Date(), "yyyy-MM-dd")}`)
+        toast.success("Dashboard data exported")
     }
 
     const formatCurrency = (value) =>
