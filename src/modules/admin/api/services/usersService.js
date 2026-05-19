@@ -719,6 +719,75 @@ export const usersService = {
     }
   },
 
+  async initiateInvestorSignup(investorData) {
+    if (USE_MOCK_DATA) {
+      await delay(800)
+      return {
+        success: true,
+        message: "OTP sent successfully",
+        data: {
+          signup_request_id: "req_" + Date.now(),
+          mobile_otp: "123456",
+          email_otp: "654321",
+          otp_expires_in_minutes: 10,
+        },
+      }
+    }
+    const response = await adminApiClient.post("/api/investor/signup", investorData)
+    return response.data
+  },
+
+  async verifyAndCompleteInvestorSignup(signupRequestId, mobileOtp, emailOtp) {
+    if (USE_MOCK_DATA) {
+      await delay(800)
+      if ((mobileOtp === "123456" || mobileOtp === "000000") && (emailOtp === "654321" || emailOtp === "000000")) {
+        return {
+          success: true,
+          message: "OTP verified successfully",
+          data: {
+            investor_id: 1,
+            mpin_setup_token: "mock_mpin_token",
+          },
+        }
+      }
+      throw { message: "Invalid OTPs", status: 400 }
+    }
+    const response = await adminApiClient.post("/api/investor/signup/verify-otp", {
+      signup_request_id: signupRequestId,
+      mobile_otp: mobileOtp,
+      email_otp: emailOtp,
+    })
+    return response.data
+  },
+
+  async setInvestorMpin(investorId, mpinToken, mpin = "1234") {
+    if (USE_MOCK_DATA) {
+      await delay(500)
+      return {
+        success: true,
+        message: "MPIN set successfully",
+        data: { token: "mock_jwt_token", investor_id: investorId },
+      }
+    }
+    const response = await adminApiClient.post("/api/investor/signup/set-mpin", {
+      investor_id: investorId,
+      mpin_setup_token: mpinToken,
+      mpin: mpin,
+    })
+    return response.data
+  },
+
+  async resendInvestorOtp(signupRequestId) {
+    if (USE_MOCK_DATA) {
+      await delay(500)
+      return { success: true, message: "OTP sent successfully" }
+    }
+    const response = await adminApiClient.post("/api/investor/signup/send-otp", {
+      signup_request_id: signupRequestId,
+    })
+    return response.data
+  },
+
   async getInvestorKycData(investorId) {
     const response = await adminApiClient.get(endpoints.admin.investorKycData(investorId))
     const data = response.data?.data ?? response.data

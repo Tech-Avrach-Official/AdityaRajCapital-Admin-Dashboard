@@ -135,7 +135,7 @@ const InvestmentsPage = () => {
       return
     }
     const headers = [
-      "Investment ID",
+      "Portfolio ID",
       "Investor",
       "Plan",
       "Amount (\u20b9)",

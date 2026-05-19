@@ -121,6 +121,13 @@ const AdminSidebar = ({ onMobileClose }) => {
           icon: Building2,
           permission: "staff.branch-head.view",
         },
+        {
+          id: "staff-investors",
+          name: "Investors",
+          path: "/admin/users/investors",
+          icon: Users,
+          permission: "investors.view",
+        },
       ],
     },
     {

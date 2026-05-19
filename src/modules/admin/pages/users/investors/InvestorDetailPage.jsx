@@ -836,7 +836,7 @@ const InvestorDetailPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="font-semibold">Investment ID</TableHead>
+                    <TableHead className="font-semibold">Portfolio ID</TableHead>
                     <TableHead className="font-semibold">Plan name</TableHead>
                     <TableHead className="font-semibold">Amount</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>

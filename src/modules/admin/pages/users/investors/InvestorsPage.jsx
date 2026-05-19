@@ -33,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { usersService } from "@/modules/admin/api/services/usersService"
 import { hierarchyService } from "@/modules/admin/api/services/hierarchyService"
 import { cn, getProfileImageUrl } from "@/lib/utils"
+import CreateInvestorModal from "./components/CreateInvestorModal"
 
 const getInitials = (name) =>
   (name || "?")
@@ -68,12 +69,13 @@ const InvestorsPage = () => {
   const [branchFilter, setBranchFilter] = useState("all")
   const [exporting, setExporting] = useState(false)
   const [sorting, setSorting] = useState([])
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     hierarchyService.getBranches().then(({ branches: list }) => setBranches(list ?? [])).catch(() => setBranches([]))
   }, [])
 
-  useEffect(() => {
+  const fetchInvestorsList = () => {
     setLoading(true)
     const branchId = branchFilter && branchFilter !== "all" ? branchFilter : undefined
     usersService
@@ -84,6 +86,10 @@ const InvestorsPage = () => {
         setInvestors([])
       })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchInvestorsList()
   }, [branchFilter])
 
   const filteredInvestors = useMemo(() => {
@@ -389,7 +395,11 @@ const InvestorsPage = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Investors" />
+      <PageHeader
+        title="Investors"
+        action="Create Investor"
+        onActionClick={() => setShowCreateModal(true)}
+      />
 
       {/* Toolbar */}
       <div className="rounded-xl border border-border/60 bg-card p-4 shadow-sm">
@@ -584,6 +594,12 @@ const InvestorsPage = () => {
           </div>
         )}
       </div>
+
+      <CreateInvestorModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={fetchInvestorsList}
+      />
     </div>
   )
 }
