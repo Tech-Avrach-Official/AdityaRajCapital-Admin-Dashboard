@@ -21,6 +21,7 @@ export const fetchInvestors = createAsyncThunk(
       }
       
       if (queryParams.kycStatus === "all") delete queryParams.kycStatus
+      if (!queryParams.partnerId || queryParams.partnerId === "all") delete queryParams.partnerId
       
       const result = await usersService.getInvestors(queryParams)
       return result

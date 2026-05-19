@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -42,6 +43,12 @@ const StatesPage = () => {
   const [selectedNationId, setSelectedNationId] = useState("")
   const [submitLoading, setSubmitLoading] = useState(false)
   const [nationFilterId, setNationFilterId] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const filteredStates = states.filter((state) =>
+    state.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (state.nation_name && state.nation_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
   const loadStates = async () => {
     setLoading(true)
@@ -108,22 +115,33 @@ const StatesPage = () => {
         description="Pre-seeded Indian states/UTs. Assign or unassign each state to a nation."
       />
 
-      {/* Filter by nation */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border">
-        <Label className="text-sm text-muted-foreground">Filter by nation</Label>
-        <Select value={nationFilterId} onValueChange={setNationFilterId}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All nations" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All states</SelectItem>
-            {nations.map((n) => (
-              <SelectItem key={n.id} value={String(n.id)}>
-                {n.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filter by nation & Search Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border">
+        <div className="flex flex-wrap items-center gap-4">
+          <Label className="text-sm text-muted-foreground">Filter by nation</Label>
+          <Select value={nationFilterId} onValueChange={setNationFilterId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All nations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All states</SelectItem>
+              {nations.map((n) => (
+                <SelectItem key={n.id} value={String(n.id)}>
+                  {n.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-[300px]">
+          <Input
+            placeholder="Search state name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -144,14 +162,14 @@ const StatesPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {states.length === 0 ? (
+              {filteredStates.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                     No states found.
                   </TableCell>
                 </TableRow>
               ) : (
-                states.map((state) => (
+                filteredStates.map((state) => (
                   <TableRow key={state.id}>
                     <TableCell className="font-medium">{state.name}</TableCell>
                     <TableCell>

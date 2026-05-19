@@ -47,11 +47,20 @@ const BranchesPage = () => {
   const [deleteBranch, setDeleteBranch] = useState(null)
   const [stateId, setStateId] = useState("")
   const [name, setName] = useState("")
+  const [code, setCode] = useState("")
   const [submitLoading, setSubmitLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteBlockedMessage, setDeleteBlockedMessage] = useState(null)
   const [stateFilterId, setStateFilterId] = useState("all")
   const [nationFilterId, setNationFilterId] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const filteredBranches = branches.filter((branch) =>
+    branch.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    branch.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    branch.state_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    branch.nation_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   const loadBranches = async () => {
     setLoading(true)
@@ -72,6 +81,7 @@ const BranchesPage = () => {
     try {
       const { states: list } = await hierarchyService.getStates()
       setStates(list ?? [])
+      // console.log("liststates", list)
     } catch (err) {
       handleApiError(err, "Failed to load states")
     }
@@ -99,6 +109,7 @@ const BranchesPage = () => {
     setEditingBranch(null)
     setStateId("")
     setName("")
+    setCode("")
     setModalOpen(true)
   }
 
@@ -106,6 +117,7 @@ const BranchesPage = () => {
     setEditingBranch(branch)
     setStateId(branch?.state_id != null ? String(branch.state_id) : "")
     setName(branch?.name ?? "")
+    setCode(branch?.code ?? "")
     setModalOpen(true)
   }
 
@@ -123,13 +135,23 @@ const BranchesPage = () => {
       toast.error("State is required")
       return
     }
+    const codeTrimmed = code?.trim()?.toUpperCase() || null
+    if (codeTrimmed && (codeTrimmed.length < 2 || codeTrimmed.length > 10)) {
+      toast.error("Branch Code must be between 2 and 10 characters")
+      return
+    }
+
     setSubmitLoading(true)
     try {
+      const payload = {
+        name: trimmed,
+        code: codeTrimmed
+      }
       if (editingBranch) {
-        await hierarchyService.updateBranch(editingBranch.id, { name: trimmed })
+        await hierarchyService.updateBranch(editingBranch.id, payload)
         toast.success("Branch updated successfully")
       } else {
-        await hierarchyService.createBranch({ state_id: Number(stateId), name: trimmed })
+        await hierarchyService.createBranch({ ...payload, state_id: Number(stateId) })
         toast.success("Branch created successfully")
       }
       setModalOpen(false)
@@ -185,35 +207,46 @@ const BranchesPage = () => {
         showAction={canCreateBranch}
       />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border">
-        <Label className="text-sm text-muted-foreground">Filter</Label>
-        <Select value={nationFilterId} onValueChange={setNationFilterId}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Nation" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All nations</SelectItem>
-            {nations.map((n) => (
-              <SelectItem key={n.id} value={String(n.id)}>
-                {n.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={stateFilterId} onValueChange={setStateFilterId}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="State" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All states</SelectItem>
-            {states.map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filters & Search Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border">
+        <div className="flex flex-wrap items-center gap-4">
+          <Label className="text-sm text-muted-foreground">Filter</Label>
+          <Select value={nationFilterId} onValueChange={setNationFilterId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Nation" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All nations</SelectItem>
+              {nations.map((n) => (
+                <SelectItem key={n.id} value={String(n.id)}>
+                  {n.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={stateFilterId} onValueChange={setStateFilterId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="State" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All states</SelectItem>
+              {states.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-[300px]">
+          <Input
+            placeholder="Search branch name, code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -228,6 +261,7 @@ const BranchesPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Branch</TableHead>
+                <TableHead>Code</TableHead>
                 <TableHead>State</TableHead>
                 <TableHead>Nation</TableHead>
                 <TableHead>Created</TableHead>
@@ -235,16 +269,19 @@ const BranchesPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {branches.length === 0 ? (
+              {filteredBranches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                     No branches yet. Add one to get started.
                   </TableCell>
                 </TableRow>
               ) : (
-                branches.map((branch) => (
+                filteredBranches.map((branch) => (
                   <TableRow key={branch.id}>
                     <TableCell className="font-medium">{branch.name}</TableCell>
+                    <TableCell className="text-sm font-mono uppercase text-blue-600 dark:text-blue-400">
+                      {branch.code ?? "—"}
+                    </TableCell>
                     <TableCell className="text-sm">{branch.state_name ?? "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {branch.nation_name ?? "—"}
@@ -329,6 +366,21 @@ const BranchesPage = () => {
                 maxLength={255}
                 disabled={submitLoading}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branch-code">Branch Code (e.g. BGM, IDR)</Label>
+              <Input
+                id="branch-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="3-4 letter code"
+                maxLength={10}
+                className="uppercase"
+                disabled={submitLoading}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                This code will be prefixed to Investment IDs (e.g. ACPL0001/BGM42)
+              </p>
             </div>
           </div>
           <DialogFooter>

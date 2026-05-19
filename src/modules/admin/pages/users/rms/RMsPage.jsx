@@ -48,8 +48,9 @@ const RMsPage = () => {
 
   // Load states when nation filter is set
   useEffect(() => {
-    if (!filters.nation_id) {
+    if (!filters.nation_id || filters.nation_id === "all") {
       setStates([])
+      setBranches([])
       return
     }
     hierarchyService
@@ -59,7 +60,7 @@ const RMsPage = () => {
 
   // Load branches when state filter is set
   useEffect(() => {
-    if (!filters.state_id) {
+    if (!filters.state_id || filters.state_id === "all") {
       setBranches([])
       return
     }
@@ -234,24 +235,35 @@ const RMsPage = () => {
         ...(nations.map((n) => ({ value: String(n.id), label: n.name })) ?? []),
       ],
     },
-    {
-      key: "state_id",
-      value: filters.state_id || "all",
-      placeholder: "State",
-      options: [
-        { value: "all", label: "All States" },
-        ...(states.map((s) => ({ value: String(s.id), label: s.name })) ?? []),
-      ],
-    },
-    {
-      key: "branch_id",
-      value: filters.branch_id || "all",
-      placeholder: "Branch",
-      options: [
-        { value: "all", label: "All Branches" },
-        ...(branches.map((b) => ({ value: String(b.id), label: b.name })) ?? []),
-      ],
-    },
+    ...(filters.nation_id && filters.nation_id !== "all" && states && states.length > 0
+      ? [
+          {
+            key: "state_id",
+            value: filters.state_id || "all",
+            placeholder: "State",
+            options: [
+              { value: "all", label: "All States" },
+              ...(states.map((s) => ({ value: String(s.id), label: s.name })) ?? []),
+            ],
+          },
+        ]
+      : []),
+    ...(filters.state_id && filters.state_id !== "all" && branches && branches.length > 0
+      ? [
+          {
+            key: "branch_id",
+            value: filters.branch_id || "all",
+            placeholder: "Branch",
+            options: [
+              { value: "all", label: "All Branches" },
+              ...(branches.map((b) => ({
+                value: String(b.id),
+                label: b.code ? `${b.name} (${b.code})` : b.name,
+              })) ?? []),
+            ],
+          },
+        ]
+      : []),
   ]
 
   // Loading skeleton

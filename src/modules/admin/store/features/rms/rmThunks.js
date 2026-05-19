@@ -29,9 +29,9 @@ export const fetchRMs = createAsyncThunk(
       
       // Remove "all" or empty filters
       if (queryParams.status === "all") delete queryParams.status
-      if (!queryParams.nation_id) delete queryParams.nation_id
-      if (!queryParams.state_id) delete queryParams.state_id
-      if (!queryParams.branch_id) delete queryParams.branch_id
+      if (!queryParams.nation_id || queryParams.nation_id === "all") delete queryParams.nation_id
+      if (!queryParams.state_id || queryParams.state_id === "all") delete queryParams.state_id
+      if (!queryParams.branch_id || queryParams.branch_id === "all") delete queryParams.branch_id
       
       const result = await usersService.getRMs(queryParams)
       return result

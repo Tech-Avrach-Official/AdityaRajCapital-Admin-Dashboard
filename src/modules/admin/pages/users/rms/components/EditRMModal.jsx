@@ -232,7 +232,14 @@ const EditRMModal = ({ open, onOpenChange, rm, onSuccess }) => {
                 <SelectItem value="none">Unassigned</SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name} {b.state_name ? `(${b.state_name})` : ""}
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <span>{b.name} {b.state_name ? `(${b.state_name})` : ""}</span>
+                      {b.code && (
+                        <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded uppercase">
+                          {b.code}
+                        </span>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

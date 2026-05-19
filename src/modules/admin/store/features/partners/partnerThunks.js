@@ -28,8 +28,8 @@ export const fetchPartners = createAsyncThunk(
       // Remove "all" or empty values
       if (queryParams.status === "all") delete queryParams.status
       if (queryParams.kycStatus === "all") delete queryParams.kycStatus
-      if (!queryParams.branch_id) delete queryParams.branch_id
-      if (!queryParams.rmId) delete queryParams.rmId
+      if (!queryParams.branch_id || queryParams.branch_id === "all") delete queryParams.branch_id
+      if (!queryParams.rmId || queryParams.rmId === "all") delete queryParams.rmId
       
       const result = await usersService.getPartners(queryParams)
       return result
